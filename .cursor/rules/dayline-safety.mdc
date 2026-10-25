@@ -1,0 +1,18 @@
+---
+description: 禁止改动 Dayline 正式库、Bundle ID 和未验证的持久化路径
+alwaysApply: true
+---
+
+# Dayline 安全边界
+
+完整流程见仓库根目录 `AGENTS.md`。以下条款不可放宽。
+
+- 禁止删除、覆盖、清空或重建正式库 `~/Library/Application Support/Dayline/Dayline.store`，以及 WAL、SHM、`Dayline.store.before-v1.1.sqlite` 和 `Automatic Backups/`。
+- 禁止在没有 `DAYLINE_XCTEST_MODE=1` 且没有 `--qa-store` 时启动 App。
+- 禁止修改 Bundle ID `app.dayline.mac` 和测试包 `app.dayline.mac.tests`。
+- 未在隔离库验证前，禁止修改默认目录 `Dayline`、文件名 `Dayline.store` 或 `ModelConfiguration` 名 `"Dayline"`。
+- 测试只用内存容器、临时目录或 `--qa-store`。scheme `Dayline` 的 Test Action 保持 `DAYLINE_XCTEST_MODE=1` 且 `shouldUseLaunchSchemeArgsEnv="NO"`。
+- 模型变化必须用 `Tests/Fixtures/v1.store` 的临时副本验证向前迁移，不得改写夹具原件。
+- 禁止提交真实用户数据、数据库、备份、导出和密钥。不要使用 `git add .`。可入库的数据库只有已核对的 `Tests/Fixtures/v1.store` 与 `Tests/Fixtures/v1-backup.json`。
+- 禁止为了通过测试而删除重要测试或降低验证标准。
+- 代码回退与 SwiftData 恢复分开处理。检出旧提交不会让已升级的数据库自动兼容。

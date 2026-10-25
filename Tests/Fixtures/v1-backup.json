@@ -1,0 +1,159 @@
+{
+  "areas" : [
+    {
+      "colorKey" : "green",
+      "id" : "6BD2196D-CEEA-443E-B134-000000000003",
+      "name" : "Health",
+      "sortOrder" : 2,
+      "symbol" : "heart"
+    },
+    {
+      "colorKey" : "purple",
+      "id" : "6BD2196D-CEEA-443E-B134-000000000002",
+      "name" : "Research",
+      "sortOrder" : 1,
+      "symbol" : "sparkle.magnifyingglass"
+    },
+    {
+      "colorKey" : "blue",
+      "id" : "6BD2196D-CEEA-443E-B134-000000000001",
+      "name" : "Learning",
+      "sortOrder" : 0,
+      "symbol" : "book.closed"
+    }
+  ],
+  "exportedAt" : 1792908703830.968,
+  "goals" : [
+    {
+      "areaID" : "6BD2196D-CEEA-443E-B134-000000000002",
+      "createdAt" : 1792907502383.772,
+      "id" : "D3110000-0000-4000-8000-000000000002",
+      "kind" : "shortTerm",
+      "notes" : "",
+      "parentGoalID" : "D3110000-0000-4000-8000-000000000001",
+      "progress" : 0.4,
+      "status" : "active",
+      "targetDate" : 1794067200000,
+      "title" : "完成第一轮文献整理"
+    },
+    {
+      "areaID" : "6BD2196D-CEEA-443E-B134-000000000002",
+      "createdAt" : 1792907502383.7,
+      "id" : "D3110000-0000-4000-8000-000000000001",
+      "kind" : "longTerm",
+      "notes" : "示例目标，可自由编辑或删除。",
+      "progress" : 0.25,
+      "status" : "active",
+      "title" : "建立扎实的研究方法"
+    },
+    {
+      "areaID" : "6BD2196D-CEEA-443E-B134-000000000001",
+      "createdAt" : 1792907708637.506,
+      "id" : "6ADD0CDD-F3E4-4AF9-B8E6-6F01E03A604A",
+      "kind" : "longTerm",
+      "notes" : "",
+      "progress" : 0,
+      "status" : "active",
+      "title" : "验收：建立长期学习节奏"
+    },
+    {
+      "areaID" : "6BD2196D-CEEA-443E-B134-000000000001",
+      "createdAt" : 1792907732710.009,
+      "id" : "F7444D3C-7803-4216-A47C-0FAC85DB815D",
+      "kind" : "shortTerm",
+      "notes" : "",
+      "parentGoalID" : "6ADD0CDD-F3E4-4AF9-B8E6-6F01E03A604A",
+      "progress" : 0,
+      "status" : "active",
+      "title" : "验收：本周读完两章"
+    }
+  ],
+  "schemaVersion" : 1,
+  "tasks" : [
+    {
+      "areaID" : "6BD2196D-CEEA-443E-B134-000000000003",
+      "createdAt" : 1792907502383.933,
+      "id" : "D3110000-0000-4000-8000-000000000103",
+      "isCompleted" : false,
+      "notes" : "示例任务",
+      "priority" : 0,
+      "repeatRule" : "none",
+      "scheduledDate" : 1792857600000,
+      "sortOrder" : 2,
+      "title" : "散步，给大脑留一点空白"
+    },
+    {
+      "areaID" : "6BD2196D-CEEA-443E-B134-000000000001",
+      "createdAt" : 1792907502383.975,
+      "id" : "D3110000-0000-4000-8000-000000000106",
+      "isCompleted" : false,
+      "notes" : "示例任务",
+      "priority" : 0,
+      "repeatRule" : "none",
+      "scheduledDate" : 1792771200000,
+      "sortOrder" : 5,
+      "title" : "继续昨天的笔记"
+    },
+    {
+      "areaID" : "6BD2196D-CEEA-443E-B134-000000000001",
+      "createdAt" : 1792907502383.872,
+      "id" : "D3110000-0000-4000-8000-000000000101",
+      "isCompleted" : false,
+      "notes" : "示例任务",
+      "priority" : 0,
+      "repeatRule" : "daily",
+      "scheduledDate" : 1792857600000,
+      "sortOrder" : 0,
+      "title" : "阅读 20 分钟"
+    },
+    {
+      "areaID" : "6BD2196D-CEEA-443E-B134-000000000001",
+      "createdAt" : 1792907502383.961,
+      "id" : "D3110000-0000-4000-8000-000000000105",
+      "isCompleted" : false,
+      "notes" : "示例任务",
+      "priority" : 0,
+      "repeatRule" : "none",
+      "scheduledDate" : 1793030400000,
+      "sortOrder" : 4,
+      "title" : "安排下周的学习时间"
+    },
+    {
+      "createdAt" : 1792907502383.9468,
+      "id" : "D3110000-0000-4000-8000-000000000104",
+      "isCompleted" : false,
+      "notes" : "示例任务",
+      "priority" : 0,
+      "repeatRule" : "none",
+      "sortOrder" : 3,
+      "title" : "一个还没想清楚的灵感"
+    },
+    {
+      "areaID" : "6BD2196D-CEEA-443E-B134-000000000002",
+      "createdAt" : 1792907502383.915,
+      "dueDate" : 1792857600000,
+      "goalID" : "D3110000-0000-4000-8000-000000000002",
+      "id" : "D3110000-0000-4000-8000-000000000102",
+      "isCompleted" : false,
+      "notes" : "示例任务",
+      "priority" : 0,
+      "repeatRule" : "none",
+      "scheduledDate" : 1792857600000,
+      "sortOrder" : 1,
+      "title" : "整理两篇论文的核心发现"
+    },
+    {
+      "areaID" : "6BD2196D-CEEA-443E-B134-000000000002",
+      "createdAt" : 1792907546177.185,
+      "goalID" : "D3110000-0000-4000-8000-000000000002",
+      "id" : "B1DB4506-2626-48CB-85F2-F5746BEA1D22",
+      "isCompleted" : false,
+      "notes" : "用于隔离数据库的真实界面验收：保存备注、日期和目标关联。",
+      "priority" : 3,
+      "repeatRule" : "none",
+      "scheduledDate" : 1792994009566.871,
+      "sortOrder" : 6,
+      "title" : "验收：重启后仍保留的每日计划"
+    }
+  ]
+}

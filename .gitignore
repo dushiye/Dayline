@@ -1,0 +1,63 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode、SwiftPM、构建缓存与日志
+.build/
+.swiftpm/
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM
+*.dSYM.zip
+*.xcresult
+timeline.xctimeline
+playground.xcworkspace
+*.log
+
+# 密钥、证书与凭据
+.env
+.env.*
+*.pem
+*.p12
+*.pfx
+*.key
+*.cer
+*.mobileprovision
+*.provisionprofile
+credentials.json
+secrets.json
+*.secret
+
+# SwiftData / SQLite 数据库、WAL、SHM、升级快照与备份目录
+*.store
+*.store-wal
+*.store-shm
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.db-wal
+*.db-shm
+*.before-v1.1.sqlite
+Automatic Backups/
+
+# 自动 JSON 备份与导出产物。真实用户导出不得入库。
+Dayline-Auto-*.json
+Before-Restore-*.json
+output/
+
+# 合成迁移夹具，自动化测试必需。
+# 2026-10-25 已核对：v1.store 只有 Learning / Research / Health、
+# 一条 “Persistent goal” 和一条 “Persistent task”；
+# v1-backup.json 是配套的示例任务备份。二者都不含个人数据。
+# v1.store-shm 是 SQLite 运行时侧文件，保持忽略。
+!Tests/Fixtures/v1.store
+!Tests/Fixtures/v1-backup.json
