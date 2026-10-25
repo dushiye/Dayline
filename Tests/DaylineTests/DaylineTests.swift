@@ -59,6 +59,9 @@ final class DaylineTests: XCTestCase {
     func testPlanningFinishedTaskCannotInflateFutureAdherence() throws { try PlanningChecks.finishedTaskCannotInflateFutureAdherence() }
     func testPlanningReopenedCompletedBaselineBecomesObservedPlan() throws { try PlanningChecks.reopenedCompletedBaselineBecomesObservedPlan() }
 
+    func testDateGridAndTimeZoneDay() throws { try DatePickerChecks.gridAndTimeZone() }
+    @MainActor func testGoalTargetDateRoundTripsOnIsolatedStore() throws { try DatePickerChecks.goalDateRoundTrip() }
+
     func testExportRenderingAndFileSafety() throws {
         try ExportChecks.run(directory: try temporaryExportDirectory("rendering"))
     }

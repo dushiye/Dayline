@@ -35,7 +35,13 @@ struct DaylineApp: App {
     }
 
     private var colorScheme: ColorScheme? {
-        appearance == "dark" ? .dark : appearance == "light" ? .light : nil
+        let process = ProcessInfo.processInfo
+        if process.arguments.contains("--qa-store"),
+           let override = process.environment["DAYLINE_APPEARANCE"] {
+            if override == "dark" { return .dark }
+            if override == "light" { return .light }
+        }
+        return appearance == "dark" ? .dark : appearance == "light" ? .light : nil
     }
 
     var body: some Scene {

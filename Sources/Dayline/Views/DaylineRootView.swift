@@ -171,6 +171,14 @@ struct DaylineRootView: View {
         .sheet(item: $goalEditor) { request in
             DaylineGoalEditor(request: request).environment(store)
         }
+        .onAppear {
+            let process = ProcessInfo.processInfo
+            guard process.arguments.contains("--qa-store"), process.environment["DAYLINE_OPEN_GOAL_DATE"] == "1" else { return }
+            selection = .goals
+            if goalEditor == nil, let goal = store.goals.first(where: { $0.targetDate != nil }) ?? store.goals.first {
+                goalEditor = GoalEditorRequest(goal: goal)
+            }
+        }
         .alert("无法完成操作", isPresented: Binding(get: { localError != nil || store.errorMessage != nil }, set: { if !$0 { localError = nil; store.errorMessage = nil } })) {
             Button("知道了") { localError = nil; store.errorMessage = nil }
         } message: { Text(localError ?? store.errorMessage ?? "请重试。") }

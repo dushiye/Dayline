@@ -69,8 +69,13 @@ struct DaylineGoalEditor: View {
                             Text("目标日期").foregroundStyle(.secondary)
                             HStack(spacing: 12) {
                                 Toggle("目标日期", isOn: $hasTarget).labelsHidden().toggleStyle(.switch).controlSize(.small)
-                                if hasTarget { DatePicker("目标日期", selection: $targetDate, displayedComponents: .date).labelsHidden() }
-                                else { Text("不限日期").foregroundStyle(.tertiary) }
+                                    .accessibilityLabel("启用目标日期")
+                                    .accessibilityIdentifier("goalTargetDateToggle")
+                                if hasTarget {
+                                    DaylineDateField(date: $targetDate, label: "目标日期") { hasTarget = false }
+                                } else {
+                                    Text("不限日期").foregroundStyle(.tertiary)
+                                }
                                 Spacer()
                             }
                         }
