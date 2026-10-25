@@ -48,7 +48,10 @@ enum DaylineDateSelection {
 struct DaylineDateField: View {
     @Binding var date: Date
     var label: String
-    var onClear: () -> Void
+    var identifier: String
+    var allowsClear: Bool = true
+    var previewEnvironmentKey: String? = nil
+    var onClear: () -> Void = {}
     @State private var isPresented = false
 
     var body: some View {
@@ -69,15 +72,16 @@ struct DaylineDateField: View {
         .buttonStyle(.plain)
         .accessibilityLabel(label)
         .accessibilityValue(date.formatted(.dateTime.year().month().day().weekday(.wide)))
-        .accessibilityIdentifier("goalTargetDateButton")
+        .accessibilityIdentifier("\(identifier)Button")
         .help("选择\(label)")
         .onAppear {
+            guard let previewEnvironmentKey else { return }
             let process = ProcessInfo.processInfo
-            guard process.arguments.contains("--qa-store"), process.environment["DAYLINE_OPEN_GOAL_DATE"] == "1" else { return }
+            guard process.arguments.contains("--qa-store"), process.environment[previewEnvironmentKey] == "1" else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { isPresented = true }
         }
         .popover(isPresented: $isPresented, arrowEdge: .bottom) {
-            DaylineDateCalendar(date: $date, onClear: {
+            DaylineDateCalendar(date: $date, label: label, identifier: identifier, allowsClear: allowsClear, onClear: {
                 onClear()
                 isPresented = false
             }, onCommit: {
@@ -92,6 +96,9 @@ struct DaylineDateField: View {
 
 private struct DaylineDateCalendar: View {
     @Binding var date: Date
+    var label: String
+    var identifier: String
+    var allowsClear: Bool
     var onClear: () -> Void
     var onCommit: () -> Void
     @State private var visibleMonth: Date
@@ -101,8 +108,11 @@ private struct DaylineDateCalendar: View {
 
     private var calendar: Calendar { .current }
 
-    init(date: Binding<Date>, onClear: @escaping () -> Void, onCommit: @escaping () -> Void) {
+    init(date: Binding<Date>, label: String, identifier: String, allowsClear: Bool, onClear: @escaping () -> Void, onCommit: @escaping () -> Void) {
         _date = date
+        self.label = label
+        self.identifier = identifier
+        self.allowsClear = allowsClear
         self.onClear = onClear
         self.onCommit = onCommit
         let calendar = Calendar.current
@@ -139,13 +149,13 @@ private struct DaylineDateCalendar: View {
         .onKeyPress(.return) { commit(keyboardDay); return .handled }
         .onKeyPress(.space) { commit(keyboardDay); return .handled }
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("goalDateCalendar")
-        .accessibilityLabel("目标日期日历")
+        .accessibilityIdentifier("\(identifier)Calendar")
+        .accessibilityLabel("\(label)日历")
     }
 
     private var header: some View {
         HStack(spacing: 8) {
-            monthButton("chevron.left", label: "上个月", identifier: "goalDatePreviousMonth") {
+            monthButton("chevron.left", label: "上个月", identifier: "\(identifier)PreviousMonth") {
                 visibleMonth = DaylineDateSelection.byAddingMonths(-1, to: visibleMonth, calendar: calendar)
             }
             Spacer(minLength: 8)
@@ -153,7 +163,7 @@ private struct DaylineDateCalendar: View {
                 .font(.system(size: 16, weight: .semibold))
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 8)
-            monthButton("chevron.right", label: "下个月", identifier: "goalDateNextMonth") {
+            monthButton("chevron.right", label: "下个月", identifier: "\(identifier)NextMonth") {
                 visibleMonth = DaylineDateSelection.byAddingMonths(1, to: visibleMonth, calendar: calendar)
             }
         }
@@ -188,13 +198,15 @@ private struct DaylineDateCalendar: View {
                 .buttonStyle(.borderless)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(DaylineDesign.accent)
-                .accessibilityIdentifier("goalDateToday")
+                .accessibilityIdentifier("\(identifier)Today")
             Spacer()
-            Button("清除日期") { onClear() }
-                .buttonStyle(.borderless)
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-                .accessibilityIdentifier("goalDateClear")
+            if allowsClear {
+                Button("清除日期") { onClear() }
+                    .buttonStyle(.borderless)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("\(identifier)Clear")
+            }
         }
         .padding(.top, 2)
     }
@@ -238,7 +250,7 @@ private struct DaylineDateCalendar: View {
         .onHover { hovering in hoveredKey = hovering ? key : (hoveredKey == key ? nil : hoveredKey) }
         .accessibilityLabel(accessibilityLabel(for: day, today: today, selected: selected))
         .accessibilityAddTraits(selected ? .isSelected : [])
-        .accessibilityIdentifier("goalDateDay-\(key)")
+        .accessibilityIdentifier("\(identifier)Day-\(key)")
         .help(accessibilityLabel(for: day, today: today, selected: selected))
     }
 

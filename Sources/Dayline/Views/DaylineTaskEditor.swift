@@ -46,11 +46,20 @@ struct DaylineTaskEditor: View {
                             HStack(spacing: 12) {
                                 Toggle("安排时间", isOn: $hasSchedule).labelsHidden().toggleStyle(.switch).controlSize(.small)
                                     .accessibilityLabel("启用计划日期")
-                                if hasSchedule { DatePicker("计划日期", selection: $scheduledDate, displayedComponents: .date).labelsHidden() }
-                                else { Text("暂不安排").foregroundStyle(.tertiary) }
+                                if hasSchedule {
+                                    DaylineDateField(date: $scheduledDate, label: "计划日期", identifier: "taskScheduledDate", previewEnvironmentKey: "DAYLINE_OPEN_TASK_DATE") { hasSchedule = false }
+                                } else {
+                                    Text("暂不安排").foregroundStyle(.tertiary)
+                                }
                                 Spacer()
-                                Button("今天") { hasSchedule = true; scheduledDate = .now }.buttonStyle(.borderless)
-                                Button("明天") { hasSchedule = true; scheduledDate = Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now }.buttonStyle(.borderless)
+                                Button("今天") {
+                                    hasSchedule = true
+                                    scheduledDate = DaylineDateSelection.startOfDay(.now)
+                                }.buttonStyle(.borderless)
+                                Button("明天") {
+                                    hasSchedule = true
+                                    scheduledDate = DaylineDateSelection.byAddingDays(1, to: .now)
+                                }.buttonStyle(.borderless)
                             }
                         }
                         GridRow {
@@ -58,8 +67,11 @@ struct DaylineTaskEditor: View {
                             HStack(spacing: 12) {
                                 Toggle("设定截止", isOn: $hasDueDate).labelsHidden().toggleStyle(.switch).controlSize(.small)
                                     .accessibilityLabel("启用截止日期")
-                                if hasDueDate { DatePicker("截止日期", selection: $dueDate, displayedComponents: .date).labelsHidden() }
-                                else { Text("没有硬性截止").foregroundStyle(.tertiary) }
+                                if hasDueDate {
+                                    DaylineDateField(date: $dueDate, label: "截止日期", identifier: "taskDueDate") { hasDueDate = false }
+                                } else {
+                                    Text("没有硬性截止").foregroundStyle(.tertiary)
+                                }
                                 Spacer()
                             }
                         }

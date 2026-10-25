@@ -72,7 +72,7 @@ struct DaylineGoalEditor: View {
                                     .accessibilityLabel("启用目标日期")
                                     .accessibilityIdentifier("goalTargetDateToggle")
                                 if hasTarget {
-                                    DaylineDateField(date: $targetDate, label: "目标日期") { hasTarget = false }
+                                    DaylineDateField(date: $targetDate, label: "目标日期", identifier: "goalTargetDate", previewEnvironmentKey: "DAYLINE_OPEN_GOAL_DATE") { hasTarget = false }
                                 } else {
                                     Text("不限日期").foregroundStyle(.tertiary)
                                 }
