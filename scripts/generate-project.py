@@ -45,7 +45,7 @@ obj('iosTestSources', f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647
 obj('appFrameworks', f'isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = {ids(["build:DaylineCore","build:DaylineData"])}; runOnlyForDeploymentPostprocessing = 0;')
 obj('testFrameworks', f'isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = {ids(["build:DaylineCoreTests","build:DaylineDataTests"])}; runOnlyForDeploymentPostprocessing = 0;')
 obj('iosFrameworks', f'isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = {ids(["build:DaylineCoreIOS","build:DaylineDataIOS"])}; runOnlyForDeploymentPostprocessing = 0;')
-obj('iosTestFrameworks', f'isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = {ids(["build:DaylineDataIOSTests"])}; runOnlyForDeploymentPostprocessing = 0;')
+obj('iosTestFrameworks', f'isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = {ids(["build:DaylineCoreIOSTests","build:DaylineDataIOSTests"])}; runOnlyForDeploymentPostprocessing = 0;')
 for key, product, package in [
     ('build:DaylineCore', 'pkg:DaylineCore', 'localpkg'),
     ('build:DaylineCoreTests', 'pkg:DaylineCoreTests', 'localpkg'),
@@ -53,6 +53,7 @@ for key, product, package in [
     ('build:DaylineDataTests', 'pkg:DaylineDataTests', 'localpkgData'),
     ('build:DaylineCoreIOS', 'pkg:DaylineCoreIOS', 'localpkg'),
     ('build:DaylineDataIOS', 'pkg:DaylineDataIOS', 'localpkgData'),
+    ('build:DaylineCoreIOSTests', 'pkg:DaylineCoreIOSTests', 'localpkg'),
     ('build:DaylineDataIOSTests', 'pkg:DaylineDataIOSTests', 'localpkgData'),
 ]:
     obj(key, f'isa = PBXBuildFile; productRef = {uid(product)};')
@@ -60,7 +61,7 @@ for key, product, package in [
 obj('localpkg', 'isa = XCLocalSwiftPackageReference; relativePath = Packages/DaylineCore;')
 obj('localpkgData', 'isa = XCLocalSwiftPackageReference; relativePath = Packages/DaylineData;')
 common = {'SDKROOT':'macosx','MACOSX_DEPLOYMENT_TARGET':'14.0','SWIFT_VERSION':'5.0','CLANG_ENABLE_MODULES':'YES','CODE_SIGN_STYLE':'Automatic','CODE_SIGN_IDENTITY':'-','COMBINE_HIDPI_IMAGES':'YES'}
-ios_common = {'SDKROOT':'iphoneos','IPHONEOS_DEPLOYMENT_TARGET':'17.0','TARGETED_DEVICE_FAMILY':'1','SWIFT_VERSION':'5.0','CLANG_ENABLE_MODULES':'YES','CODE_SIGN_STYLE':'Automatic','CODE_SIGN_IDENTITY':'-','CODE_SIGNING_REQUIRED':'NO','CODE_SIGNING_ALLOWED':'YES','SUPPORTED_PLATFORMS':'iphoneos iphonesimulator','SUPPORTS_MACCATALYST':'NO','ENABLE_PREVIEWS':'YES'}
+ios_common = {'SDKROOT':'iphoneos','IPHONEOS_DEPLOYMENT_TARGET':'17.0','TARGETED_DEVICE_FAMILY':'1','SWIFT_VERSION':'5.0','CLANG_ENABLE_MODULES':'YES','CODE_SIGN_STYLE':'Automatic','CODE_SIGN_IDENTITY':'-','CODE_SIGNING_REQUIRED':'NO','CODE_SIGNING_ALLOWED':'YES','SUPPORTED_PLATFORMS':'iphoneos iphonesimulator','SUPPORTS_MACCATALYST':'NO','ENABLE_PREVIEWS':'YES','ARCHS':'arm64','EXCLUDED_ARCHS':'x86_64'}
 scopes = ['project','app','test'] + (['ios','iostest'] if ios_sources else [])
 for scope in scopes:
     for mode in ['Debug','Release']:
@@ -89,7 +90,7 @@ if ios_sources:
     obj('iosProxy', f'isa = PBXContainerItemProxy; containerPortal = {uid("project")}; proxyType = 1; remoteGlobalIDString = {uid("ios")}; remoteInfo = DaylineIOS;')
     obj('iosDependency', f'isa = PBXTargetDependency; target = {uid("ios")}; targetProxy = {uid("iosProxy")};')
     obj('ios', f'isa = PBXNativeTarget; buildConfigurationList = {uid("iosConfigs")}; buildPhases = {ids(["iosSources","iosFrameworks"])}; buildRules = (); dependencies = (); name = DaylineIOS; packageProductDependencies = {ids(["pkg:DaylineCoreIOS","pkg:DaylineDataIOS"])}; productName = DaylineIOS; productReference = {uid("iosProduct")}; productType = "com.apple.product-type.application";')
-    obj('iostest', f'isa = PBXNativeTarget; buildConfigurationList = {uid("iostestConfigs")}; buildPhases = {ids(["iosTestSources","iosTestFrameworks"])}; buildRules = (); dependencies = {ids(["iosDependency"])}; name = DaylineIOSTests; packageProductDependencies = {ids(["pkg:DaylineDataIOSTests"])}; productName = DaylineIOSTests; productReference = {uid("iosTestProduct")}; productType = "com.apple.product-type.bundle.unit-test";')
+    obj('iostest', f'isa = PBXNativeTarget; buildConfigurationList = {uid("iostestConfigs")}; buildPhases = {ids(["iosTestSources","iosTestFrameworks"])}; buildRules = (); dependencies = {ids(["iosDependency"])}; name = DaylineIOSTests; packageProductDependencies = {ids(["pkg:DaylineCoreIOSTests","pkg:DaylineDataIOSTests"])}; productName = DaylineIOSTests; productReference = {uid("iosTestProduct")}; productType = "com.apple.product-type.bundle.unit-test";')
     targets += ["ios","iostest"]
 obj('project', f'isa = PBXProject; attributes = {{ LastUpgradeCheck = 1600; }}; buildConfigurationList = {uid("projectConfigs")}; compatibilityVersion = "Xcode 14.0"; developmentRegion = zh_CN; hasScannedForEncodings = 0; knownRegions = (en, zh_CN, Base); mainGroup = {uid("rootGroup")}; packageReferences = {ids(["localpkg","localpkgData"])}; productRefGroup = {uid("products")}; projectDirPath = ""; projectRoot = ""; targets = {ids(targets)};')
 (project/'project.pbxproj').write_text('// !$*UTF8*$!\n{\n\tarchiveVersion = 1;\n\tclasses = {};\n\tobjectVersion = 56;\n\tobjects = {\n'+'\n'.join(objects)+'\n\t};\n\trootObject = '+uid('project')+';\n}\n')
@@ -104,4 +105,13 @@ app_ref = ref('app','Dayline.app')
 <LaunchAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" launchStyle="0" useCustomWorkingDirectory="NO" ignoresPersistentStateOnLaunch="NO" debugDocumentVersioning="YES" debugServiceExtension="internal" allowLocationSimulation="YES"><BuildableProductRunnable runnableDebuggingMode="0">{app_ref}</BuildableProductRunnable></LaunchAction>
 <ProfileAction buildConfiguration="Release" shouldUseLaunchSchemeArgsEnv="YES" savedToolIdentifier="" useCustomWorkingDirectory="NO" debugDocumentVersioning="YES"><BuildableProductRunnable runnableDebuggingMode="0">{app_ref}</BuildableProductRunnable></ProfileAction>
 <AnalyzeAction buildConfiguration="Debug"/><ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/></Scheme>''')
-print(f'Generated {project} ({len(sources)} source files, {len(tests)} test files)')
+if ios_sources:
+    ios_ref = ref('ios', 'DaylineIOS.app')
+    (scheme_dir/'DaylineIOS.xcscheme').write_text(f'''<?xml version="1.0" encoding="UTF-8"?>
+<Scheme LastUpgradeVersion="1600" version="1.3">
+<BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES"><BuildActionEntries><BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES">{ios_ref}</BuildActionEntry></BuildActionEntries></BuildAction>
+<TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="NO"><Testables><TestableReference skipped="NO">{ref('iostest','DaylineIOSTests.xctest')}</TestableReference></Testables><EnvironmentVariables><EnvironmentVariable key="DAYLINE_XCTEST_MODE" value="1" isEnabled="YES"/></EnvironmentVariables></TestAction>
+<LaunchAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" launchStyle="0" useCustomWorkingDirectory="NO" ignoresPersistentStateOnLaunch="NO" debugDocumentVersioning="YES" debugServiceExtension="internal" allowLocationSimulation="YES"><BuildableProductRunnable runnableDebuggingMode="0">{ios_ref}</BuildableProductRunnable></LaunchAction>
+<ProfileAction buildConfiguration="Release" shouldUseLaunchSchemeArgsEnv="YES" savedToolIdentifier="" useCustomWorkingDirectory="NO" debugDocumentVersioning="YES"><BuildableProductRunnable runnableDebuggingMode="0">{ios_ref}</BuildableProductRunnable></ProfileAction>
+<AnalyzeAction buildConfiguration="Debug"/><ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/></Scheme>''')
+print(f'Generated {project} ({len(sources)} Mac sources, {len(ios_sources)} iOS sources, {len(tests)} Mac tests)')

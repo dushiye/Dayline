@@ -5,10 +5,8 @@ import DaylineData
 // Quiet, system-native typography and surfaces adapt to the macOS appearance.
 enum DaylineDesign {
     static let accent = Color(nsColor: NSColor(name: nil) { appearance in
-        if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
-            return NSColor(calibratedRed: 0.58, green: 0.68, blue: 0.98, alpha: 1)
-        }
-        return NSColor(calibratedRed: 0.29, green: 0.43, blue: 0.88, alpha: 1)
+        let rgb = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? DaylineBrand.accentDark : DaylineBrand.accentLight
+        return NSColor(calibratedRed: rgb.red, green: rgb.green, blue: rgb.blue, alpha: 1)
     })
     static let pageInset: CGFloat = 44
     static let rowVerticalInset: CGFloat = 13
@@ -18,13 +16,9 @@ enum DaylineDesign {
     static let canvas = Color(nsColor: .textBackgroundColor)
     static let line = Color.primary.opacity(0.065)
     static func color(_ key: String?) -> Color {
-        switch key {
-        case "purple": return Color(red: 0.58, green: 0.49, blue: 0.75)
-        case "green": return Color(red: 0.40, green: 0.62, blue: 0.49)
-        case "orange": return Color(red: 0.77, green: 0.56, blue: 0.32)
-        case "rose": return Color(red: 0.74, green: 0.45, blue: 0.48)
-        default: return accent
-        }
+        if key == nil || key == "blue" { return accent }
+        let rgb = DaylineBrand.area(key)
+        return Color(red: rgb.red, green: rgb.green, blue: rgb.blue)
     }
 }
 

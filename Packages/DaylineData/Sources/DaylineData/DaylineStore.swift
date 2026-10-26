@@ -288,27 +288,34 @@ import DaylineCore
     }
 
     public func updateIdea(_ idea: Idea, title: String, body: String, areaID: UUID?, goalID: UUID?) {
-        guard ideas.contains(where: { $0 === idea }) else { return }
+        guard let idea = liveIdea(idea) else { return }
         idea.title = title; idea.body = body; idea.areaID = areaID; idea.goalID = goalID
         idea.updatedAt = Date()
         save()
     }
     public func setIdeaPinned(_ idea: Idea, to value: Bool) {
-        guard ideas.contains(where: { $0 === idea }) else { return }
+        guard let idea = liveIdea(idea) else { return }
         idea.isPinned = value; idea.updatedAt = Date(); save()
     }
     public func setIdeaArchived(_ idea: Idea, to value: Bool) {
-        guard ideas.contains(where: { $0 === idea }) else { return }
+        guard let idea = liveIdea(idea) else { return }
         idea.isArchived = value; idea.updatedAt = Date(); save()
     }
     public func deleteIdea(_ idea: Idea) {
-        guard ideas.contains(where: { $0 === idea }) else { return }
+        guard let idea = liveIdea(idea) else { return }
         context.delete(idea); save()
     }
     @discardableResult
     public func taskFromIdea(_ idea: Idea) -> DayTask? {
-        let title = idea.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return addTask(title: title.isEmpty ? "未命名灵感" : title, areaID: idea.areaID, goalID: idea.goalID, notes: idea.body)
+        let source = liveIdea(idea) ?? idea
+        let title = source.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return addTask(title: title.isEmpty ? "未命名灵感" : title, areaID: source.areaID, goalID: source.goalID, notes: source.body)
+    }
+
+    /// Refresh replaces model instances. Callers may still hold the previous object, so idea
+    /// edits follow the business UUID instead of SwiftData object identity.
+    private func liveIdea(_ idea: Idea) -> Idea? {
+        ideas.first { $0.id == idea.id }
     }
 
     public func runDailyBackup() {
