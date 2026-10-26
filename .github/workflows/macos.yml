@@ -1,0 +1,25 @@
+name: macOS
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Environment
+        run: scripts/check-environment.sh
+
+      - name: DaylineCore
+        run: swift test --package-path Packages/DaylineCore
+
+      - name: Mac app tests
+        run: |
+          xcodebuild -project Dayline.xcodeproj -scheme Dayline \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath "${RUNNER_TEMP}/DaylineDerivedData" \
+            ONLY_ACTIVE_ARCH=YES \
+            test

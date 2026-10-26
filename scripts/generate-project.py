@@ -71,7 +71,7 @@ for scope in scopes:
     for mode in ['Debug','Release']:
         settings = dict(common) if scope == 'project' else {}
         if scope == 'project':
-            settings.update({'SWIFT_OPTIMIZATION_LEVEL':'-Onone' if mode == 'Debug' else '-O','SWIFT_COMPILATION_MODE':'singlefile' if mode == 'Debug' else 'wholemodule','DEBUG_INFORMATION_FORMAT':'dwarf' if mode == 'Debug' else 'dwarf-with-dsym','ENABLE_TESTABILITY':'YES' if mode == 'Debug' else 'NO'})
+            settings.update({'SWIFT_OPTIMIZATION_LEVEL':'-Onone' if mode == 'Debug' else '-O','SWIFT_COMPILATION_MODE':'singlefile' if mode == 'Debug' else 'wholemodule','DEBUG_INFORMATION_FORMAT':'dwarf' if mode == 'Debug' else 'dwarf-with-dsym','ENABLE_TESTABILITY':'YES' if mode == 'Debug' else 'NO','ONLY_ACTIVE_ARCH':'YES' if mode == 'Debug' else 'NO'})
         elif scope == 'app':
             settings.update({'PRODUCT_NAME':'Dayline','PRODUCT_BUNDLE_IDENTIFIER':'app.dayline.mac','INFOPLIST_FILE':'Resources/Info.plist','GENERATE_INFOPLIST_FILE':'NO','LD_RUNPATH_SEARCH_PATHS':'$(inherited) @executable_path/../Frameworks','ENABLE_APP_SANDBOX':'NO','CURRENT_PROJECT_VERSION':'3','MARKETING_VERSION':'1.1.1'})
         elif scope == 'test':

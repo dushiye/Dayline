@@ -1,0 +1,18 @@
+name: Feature request
+description: A change that would make Dayline more useful.
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What should change?
+      description: Cloud sync is not a current feature. Say if the idea depends on it.
+    validations:
+      required: true

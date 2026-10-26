@@ -6,6 +6,12 @@ if [[ ! -x build/Dayline.app/Contents/MacOS/Dayline ]]; then
 fi
 destination="$HOME/Applications/Dayline.app"
 mkdir -p "$HOME/Applications"
+if [[ -e "$destination" && "${DAYLINE_REPLACE_INSTALLED:-}" != "yes" ]]; then
+  echo "error: refusing to replace $destination." >&2
+  echo "Set DAYLINE_REPLACE_INSTALLED=yes to update this copy." >&2
+  echo "The database in ~/Library/Application Support/Dayline is not modified." >&2
+  exit 3
+fi
 if [[ -e "$destination" ]]; then
   backup="$HOME/Applications/Dayline-previous-$(date +%Y%m%d-%H%M%S).app"
   if [[ -e "$backup" ]]; then

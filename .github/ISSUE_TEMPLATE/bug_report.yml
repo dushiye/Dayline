@@ -1,0 +1,35 @@
+name: Bug report
+description: A problem in the Mac app, the experimental iPhone app, or the install scripts.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where it happens
+      options:
+        - Mac app
+        - iPhone app (experimental)
+        - Install or build scripts
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App and macOS versions
+      placeholder: Dayline 1.1.1, macOS 15.6
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps
+      description: Use synthetic titles. Do not paste real tasks, goals, or database files.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
