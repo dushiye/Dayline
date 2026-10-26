@@ -20,4 +20,10 @@
 
 Target 是 `DaylineIOS`，bundle id `app.dayline.ios`，iOS 17，版本 0.1.0（build 1）。数据在 App 自己的 Application Support 里。启动时如果路径正好是 Mac 的正式库，会拒绝打开。
 
-这台机器的 iOS 27.1 模拟器运行时只提供 iPhone Duo，不能创建 SE 或 Pro Max。界面检查用的是它的 1398×2034 显示屏。系统 `TabView` 在这台模拟器上会把标签画成右侧浮条并挡住列表，所以 iPhone 版使用底部标签栏。
+iOS 27.1 运行时只带 iPhone Duo。普通直板机用另外安装的 iOS 27.0 模拟器（build 24A434，约 8 GB，Xcode 27.1 可直接使用）。实测设备：
+
+- iPhone 17，iOS 27.0，浅色和深色
+- iPhone SE（第三代），iOS 27.0
+- iPhone 17 Pro Max，iOS 27.0
+
+截图文件名以 `simulator-` 开头，并写明机型和 `ios27.0`。底部导航是应用自己的标签栏，避免 Duo 上系统 `TabView` 变成侧边浮条。日期选择在小屏上用全屏打开，整月都能看见。

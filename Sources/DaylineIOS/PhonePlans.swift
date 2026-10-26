@@ -23,6 +23,7 @@ struct TodayView: View {
             Group {
                 if overdue.isEmpty && today.isEmpty && completed.isEmpty {
                     PhoneEmpty(symbol: "sun.max", title: "今天还没有安排", detail: "把一件想做的事记在下方。完成之后，它会安静地收起来。")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
                         taskSection("逾期", tasks: overdue)
@@ -47,11 +48,16 @@ struct TodayView: View {
                                 }
                                 .buttonStyle(.plain)
                                 .foregroundStyle(.secondary)
+                                .accessibilityIdentifier("show-completed")
                             }
                         }
                     }
                     .listStyle(.insetGrouped)
+                    .contentMargins(.bottom, 12, for: .scrollContent)
                 }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                QuickCaptureBar(placeholder: "添加今天的任务", identifier: "quick-add-today", text: $draft) { addDraft() }
             }
             .navigationTitle("今天")
             .navigationBarTitleDisplayMode(.large)
@@ -63,10 +69,14 @@ struct TodayView: View {
                     .accessibilityLabel("新建任务")
                 }
             }
-            .safeAreaInset(edge: .bottom) {
-                QuickCaptureBar(placeholder: "添加今天的任务", identifier: "quick-add-today", text: $draft) { addDraft() }
-            }
             .scrollDismissesKeyboard(.interactively)
+            .onAppear {
+                guard editor == nil else { return }
+                let args = ProcessInfo.processInfo.arguments
+                if args.contains("--open-editor") || args.contains("--open-date") {
+                    editor = PhoneTaskRequest(scheduledDate: Calendar.current.startOfDay(for: Date()))
+                }
+            }
             .sheet(item: $editor) { PhoneTaskEditor(request: $0) }
             .confirmationDialog("删除这项任务？", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }), titleVisibility: .visible) {
                 Button("删除任务", role: .destructive) { if let pendingDelete { store.deleteTask(pendingDelete) } }
@@ -121,7 +131,7 @@ struct UpcomingView: View {
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 10)
                 }
                 .accessibilityIdentifier("upcoming-days")
                 if tasks.isEmpty {
@@ -161,12 +171,14 @@ struct UpcomingView: View {
         let selectedDay = Calendar.current.isDate(day, inSameDayAs: selected)
         let count = PhoneTasks.open(store).filter { DaylineDates.occurs($0, on: day) }.count
         return Button { selected = day } label: {
-            VStack(spacing: 4) {
-                Text(day.formatted(.dateTime.weekday(.narrow))).font(.caption)
-                Text(day.formatted(.dateTime.day())).font(.body.weight(.semibold))
-                Circle().fill(count > 0 ? PhoneDesign.accent : Color.clear).frame(width: 5, height: 5)
+            VStack(spacing: 2) {
+                Text(day.formatted(.dateTime.weekday(.narrow))).font(.caption2).lineLimit(1)
+                Text(day.formatted(.dateTime.day())).font(.body.weight(.semibold)).lineLimit(1)
+                Circle().fill(count > 0 ? (selectedDay ? Color.white : PhoneDesign.accent) : Color.clear).frame(width: 4, height: 4)
             }
-            .frame(width: 52, height: 72)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+            .padding(.horizontal, 14)
             .foregroundStyle(selectedDay ? Color.white : Color.primary)
             .background(selectedDay ? PhoneDesign.accent : Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
@@ -189,6 +201,7 @@ struct InboxView: View {
             Group {
                 if tasks.isEmpty {
                     PhoneEmpty(symbol: "tray", title: "收件箱是空的", detail: "先记下来。稍后再决定领域、目标和日期。")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
                         Section("待整理") {
@@ -201,13 +214,14 @@ struct InboxView: View {
                         }
                     }
                     .listStyle(.insetGrouped)
+                    .contentMargins(.bottom, 12, for: .scrollContent)
                 }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                QuickCaptureBar(placeholder: "快速记下一件事", identifier: "quick-add-inbox", text: $draft) { addDraft() }
             }
             .navigationTitle("收件箱")
             .navigationBarTitleDisplayMode(.large)
-            .safeAreaInset(edge: .bottom) {
-                QuickCaptureBar(placeholder: "快速记下一件事", identifier: "quick-add-inbox", text: $draft) { addDraft() }
-            }
             .scrollDismissesKeyboard(.interactively)
             .sheet(item: $editor) { PhoneTaskEditor(request: $0) }
             .confirmationDialog("删除这项任务？", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }), titleVisibility: .visible) {
@@ -294,9 +308,9 @@ private struct PhoneTabBar: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, minHeight: 48)
+            .contentShape(Rectangle())
             .foregroundStyle(tab == value ? PhoneDesign.accent : Color.secondary)
-            .padding(.vertical, 2)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)

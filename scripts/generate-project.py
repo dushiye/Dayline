@@ -18,12 +18,13 @@ sources = [str(p.relative_to(root)) for p in sorted((root/'Sources'/'Dayline').r
 tests = [str(p.relative_to(root)) for p in sorted((root/'Tests'/'DaylineTests').rglob('*.swift'))]
 ios_sources = [str(p.relative_to(root)) for p in sorted((root/'Sources'/'DaylineIOS').rglob('*.swift'))] if (root/'Sources'/'DaylineIOS').exists() else []
 ios_tests = [str(p.relative_to(root)) for p in sorted((root/'Tests'/'DaylineIOSTests').rglob('*.swift'))] if (root/'Tests'/'DaylineIOSTests').exists() else []
+ios_ui = [str(p.relative_to(root)) for p in sorted((root/'Tests'/'DaylineIOSUITests').rglob('*.swift'))] if (root/'Tests'/'DaylineIOSUITests').exists() else []
 resources = ['Resources/Dayline.icns'] if (root/'Resources/Dayline.icns').exists() else []
 ios_plist = ['Resources/iOS/Info.plist'] if (root/'Resources/iOS/Info.plist').exists() else []
-for path in sources + tests + ios_sources + ios_tests + resources + ['Resources/Info.plist', 'README.md'] + ios_plist:
+for path in sources + tests + ios_sources + ios_tests + ios_ui + resources + ['Resources/Info.plist', 'README.md'] + ios_plist:
     filetype = 'sourcecode.swift' if path.endswith('.swift') else 'image.icns' if path.endswith('.icns') else 'text.plist.xml' if path.endswith('.plist') else 'text'
     obj(path, f'isa = PBXFileReference; lastKnownFileType = {filetype}; path = {q(path)}; sourceTree = SOURCE_ROOT;')
-for path in sources + tests + ios_sources + ios_tests + resources:
+for path in sources + tests + ios_sources + ios_tests + ios_ui + resources:
     obj('build:'+path, f'isa = PBXBuildFile; fileRef = {uid(path)};')
 obj('appProduct', 'isa = PBXFileReference; explicitFileType = wrapper.application; path = Dayline.app; sourceTree = BUILT_PRODUCTS_DIR;')
 obj('testProduct', 'isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = DaylineTests.xctest; sourceTree = BUILT_PRODUCTS_DIR;')
@@ -34,14 +35,17 @@ obj('iosProduct', 'isa = PBXFileReference; explicitFileType = wrapper.applicatio
 obj('iosTestProduct', 'isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = DaylineIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR;')
 obj('iosSourceGroup', f'isa = PBXGroup; name = DaylineIOS; children = {ids(ios_sources)}; sourceTree = "<group>";')
 obj('iosTestGroup', f'isa = PBXGroup; name = DaylineIOSTests; children = {ids(ios_tests)}; sourceTree = "<group>";')
-product_children = ["appProduct", "testProduct"] + (["iosProduct", "iosTestProduct"] if ios_sources else [])
-group_children = ["sourceGroup","testGroup","iosSourceGroup","iosTestGroup","resourceGroup","README.md","products"] if ios_sources else ["sourceGroup","testGroup","resourceGroup","README.md","products"]
+obj('iosUIProduct', 'isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = DaylineIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR;')
+obj('iosUITestGroup', f'isa = PBXGroup; name = DaylineIOSUITests; children = {ids(ios_ui)}; sourceTree = "<group>";')
+product_children = ["appProduct", "testProduct"] + (["iosProduct", "iosTestProduct"] + (["iosUIProduct"] if ios_ui else []) if ios_sources else [])
+group_children = ["sourceGroup","testGroup","iosSourceGroup","iosTestGroup"] + (["iosUITestGroup"] if ios_ui else []) + ["resourceGroup","README.md","products"] if ios_sources else ["sourceGroup","testGroup","resourceGroup","README.md","products"]
 obj('products', f'isa = PBXGroup; name = Products; children = {ids(product_children)}; sourceTree = "<group>";')
 obj('rootGroup', f'isa = PBXGroup; children = {ids(group_children)}; sourceTree = "<group>";')
 for key, paths, phase in [('appSources', sources, 'PBXSourcesBuildPhase'), ('testSources', tests, 'PBXSourcesBuildPhase'), ('appResources', resources, 'PBXResourcesBuildPhase')]:
     obj(key, f'isa = {phase}; buildActionMask = 2147483647; files = {ids(["build:"+p for p in paths]) if paths else "()"}; runOnlyForDeploymentPostprocessing = 0;')
 obj('iosSources', f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {ids(["build:"+p for p in ios_sources]) if ios_sources else "()"}; runOnlyForDeploymentPostprocessing = 0;')
 obj('iosTestSources', f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {ids(["build:"+p for p in ios_tests]) if ios_tests else "()"}; runOnlyForDeploymentPostprocessing = 0;')
+obj('iosUISources', f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {ids(["build:"+p for p in ios_ui]) if ios_ui else "()"}; runOnlyForDeploymentPostprocessing = 0;')
 obj('appFrameworks', f'isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = {ids(["build:DaylineCore","build:DaylineData"])}; runOnlyForDeploymentPostprocessing = 0;')
 obj('testFrameworks', f'isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = {ids(["build:DaylineCoreTests","build:DaylineDataTests"])}; runOnlyForDeploymentPostprocessing = 0;')
 obj('iosFrameworks', f'isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = {ids(["build:DaylineCoreIOS","build:DaylineDataIOS"])}; runOnlyForDeploymentPostprocessing = 0;')
@@ -62,7 +66,7 @@ obj('localpkg', 'isa = XCLocalSwiftPackageReference; relativePath = Packages/Day
 obj('localpkgData', 'isa = XCLocalSwiftPackageReference; relativePath = Packages/DaylineData;')
 common = {'SDKROOT':'macosx','MACOSX_DEPLOYMENT_TARGET':'14.0','SWIFT_VERSION':'5.0','CLANG_ENABLE_MODULES':'YES','CODE_SIGN_STYLE':'Automatic','CODE_SIGN_IDENTITY':'-','COMBINE_HIDPI_IMAGES':'YES'}
 ios_common = {'SDKROOT':'iphoneos','IPHONEOS_DEPLOYMENT_TARGET':'17.0','TARGETED_DEVICE_FAMILY':'1','SWIFT_VERSION':'5.0','CLANG_ENABLE_MODULES':'YES','CODE_SIGN_STYLE':'Automatic','CODE_SIGN_IDENTITY':'-','CODE_SIGNING_REQUIRED':'NO','CODE_SIGNING_ALLOWED':'YES','SUPPORTED_PLATFORMS':'iphoneos iphonesimulator','SUPPORTS_MACCATALYST':'NO','ENABLE_PREVIEWS':'YES','ARCHS':'arm64','EXCLUDED_ARCHS':'x86_64'}
-scopes = ['project','app','test'] + (['ios','iostest'] if ios_sources else [])
+scopes = ['project','app','test'] + (['ios','iostest'] + (['iosui'] if ios_ui else []) if ios_sources else [])
 for scope in scopes:
     for mode in ['Debug','Release']:
         settings = dict(common) if scope == 'project' else {}
@@ -75,6 +79,9 @@ for scope in scopes:
         elif scope == 'ios':
             settings = dict(ios_common)
             settings.update({'PRODUCT_NAME':'DaylineIOS','PRODUCT_BUNDLE_IDENTIFIER':'app.dayline.ios','INFOPLIST_FILE':'Resources/iOS/Info.plist','GENERATE_INFOPLIST_FILE':'NO','LD_RUNPATH_SEARCH_PATHS':'$(inherited) @executable_path/Frameworks','CURRENT_PROJECT_VERSION':'1','MARKETING_VERSION':'0.1.0','TARGETED_DEVICE_FAMILY':'1'})
+        elif scope == 'iosui':
+            settings = dict(ios_common)
+            settings.update({'PRODUCT_NAME':'DaylineIOSUITests','PRODUCT_BUNDLE_IDENTIFIER':'app.dayline.ios.uitests','GENERATE_INFOPLIST_FILE':'YES','TEST_TARGET_NAME':'DaylineIOS','LD_RUNPATH_SEARCH_PATHS':'$(inherited) @executable_path/Frameworks @loader_path/Frameworks'})
         else:
             settings = dict(ios_common)
             settings.update({'PRODUCT_NAME':'DaylineIOSTests','PRODUCT_BUNDLE_IDENTIFIER':'app.dayline.ios.tests','GENERATE_INFOPLIST_FILE':'YES','TEST_HOST':'$(BUILT_PRODUCTS_DIR)/DaylineIOS.app/DaylineIOS','BUNDLE_LOADER':'$(TEST_HOST)','LD_RUNPATH_SEARCH_PATHS':'$(inherited) @executable_path/Frameworks @loader_path/Frameworks'})
@@ -92,6 +99,11 @@ if ios_sources:
     obj('ios', f'isa = PBXNativeTarget; buildConfigurationList = {uid("iosConfigs")}; buildPhases = {ids(["iosSources","iosFrameworks"])}; buildRules = (); dependencies = (); name = DaylineIOS; packageProductDependencies = {ids(["pkg:DaylineCoreIOS","pkg:DaylineDataIOS"])}; productName = DaylineIOS; productReference = {uid("iosProduct")}; productType = "com.apple.product-type.application";')
     obj('iostest', f'isa = PBXNativeTarget; buildConfigurationList = {uid("iostestConfigs")}; buildPhases = {ids(["iosTestSources","iosTestFrameworks"])}; buildRules = (); dependencies = {ids(["iosDependency"])}; name = DaylineIOSTests; packageProductDependencies = {ids(["pkg:DaylineCoreIOSTests","pkg:DaylineDataIOSTests"])}; productName = DaylineIOSTests; productReference = {uid("iosTestProduct")}; productType = "com.apple.product-type.bundle.unit-test";')
     targets += ["ios","iostest"]
+    if ios_ui:
+        obj('iosUIProxy', f'isa = PBXContainerItemProxy; containerPortal = {uid("project")}; proxyType = 1; remoteGlobalIDString = {uid("ios")}; remoteInfo = DaylineIOS;')
+        obj('iosUIDependency', f'isa = PBXTargetDependency; target = {uid("ios")}; targetProxy = {uid("iosUIProxy")};')
+        obj('iosui', f'isa = PBXNativeTarget; buildConfigurationList = {uid("iosuiConfigs")}; buildPhases = {ids(["iosUISources"])}; buildRules = (); dependencies = {ids(["iosUIDependency"])}; name = DaylineIOSUITests; productName = DaylineIOSUITests; productReference = {uid("iosUIProduct")}; productType = "com.apple.product-type.bundle.ui-testing";')
+        targets += ["iosui"]
 obj('project', f'isa = PBXProject; attributes = {{ LastUpgradeCheck = 1600; }}; buildConfigurationList = {uid("projectConfigs")}; compatibilityVersion = "Xcode 14.0"; developmentRegion = zh_CN; hasScannedForEncodings = 0; knownRegions = (en, zh_CN, Base); mainGroup = {uid("rootGroup")}; packageReferences = {ids(["localpkg","localpkgData"])}; productRefGroup = {uid("products")}; projectDirPath = ""; projectRoot = ""; targets = {ids(targets)};')
 (project/'project.pbxproj').write_text('// !$*UTF8*$!\n{\n\tarchiveVersion = 1;\n\tclasses = {};\n\tobjectVersion = 56;\n\tobjects = {\n'+'\n'.join(objects)+'\n\t};\n\trootObject = '+uid('project')+';\n}\n')
 scheme_dir = project/'xcshareddata/xcschemes'
@@ -110,7 +122,7 @@ if ios_sources:
     (scheme_dir/'DaylineIOS.xcscheme').write_text(f'''<?xml version="1.0" encoding="UTF-8"?>
 <Scheme LastUpgradeVersion="1600" version="1.3">
 <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES"><BuildActionEntries><BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES">{ios_ref}</BuildActionEntry></BuildActionEntries></BuildAction>
-<TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="NO"><Testables><TestableReference skipped="NO">{ref('iostest','DaylineIOSTests.xctest')}</TestableReference></Testables><EnvironmentVariables><EnvironmentVariable key="DAYLINE_XCTEST_MODE" value="1" isEnabled="YES"/></EnvironmentVariables></TestAction>
+<TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="NO"><Testables><TestableReference skipped="NO">{ref('iostest','DaylineIOSTests.xctest')}</TestableReference>{f'<TestableReference skipped="NO">{ref("iosui","DaylineIOSUITests.xctest")}</TestableReference>' if ios_ui else ''}</Testables><EnvironmentVariables><EnvironmentVariable key="DAYLINE_XCTEST_MODE" value="1" isEnabled="YES"/></EnvironmentVariables></TestAction>
 <LaunchAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" launchStyle="0" useCustomWorkingDirectory="NO" ignoresPersistentStateOnLaunch="NO" debugDocumentVersioning="YES" debugServiceExtension="internal" allowLocationSimulation="YES"><BuildableProductRunnable runnableDebuggingMode="0">{ios_ref}</BuildableProductRunnable></LaunchAction>
 <ProfileAction buildConfiguration="Release" shouldUseLaunchSchemeArgsEnv="YES" savedToolIdentifier="" useCustomWorkingDirectory="NO" debugDocumentVersioning="YES"><BuildableProductRunnable runnableDebuggingMode="0">{ios_ref}</BuildableProductRunnable></ProfileAction>
 <AnalyzeAction buildConfiguration="Debug"/><ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/></Scheme>''')

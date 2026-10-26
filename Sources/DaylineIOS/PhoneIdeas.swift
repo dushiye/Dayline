@@ -120,6 +120,7 @@ private struct IdeaDetail: View {
             Section {
                 TextField("标题", text: $title, axis: .vertical)
                     .font(.title3.weight(.medium))
+                    .accessibilityIdentifier("idea-title")
                 TextField("写下来", text: $bodyText, axis: .vertical)
                     .lineLimit(6...16)
             }
@@ -135,14 +136,19 @@ private struct IdeaDetail: View {
                 Toggle("置顶", isOn: Binding(get: { idea.isPinned }, set: { store.setIdeaPinned(idea, to: $0) }))
                 Toggle("归档", isOn: Binding(get: { idea.isArchived }, set: { store.setIdeaArchived(idea, to: $0) }))
             }
-            Section {
-                Button { convert() } label: { Label("转为任务", systemImage: "checkmark.circle") }
-                if let createdTask { Text(createdTask).font(.footnote).foregroundStyle(.secondary) }
+            if let createdTask {
+                Section { Text(createdTask).font(.footnote).foregroundStyle(.secondary) }
             }
             Section { Button("删除灵感", role: .destructive) { confirmDelete = true } }
         }
         .navigationTitle("灵感")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("转为任务", action: convert)
+                    .accessibilityIdentifier("idea-convert")
+            }
+        }
         .onAppear {
             title = idea.title
             bodyText = idea.body

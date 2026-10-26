@@ -49,16 +49,20 @@ struct PhoneTaskEditor: View {
                 Section {
                     TextField("想做什么？", text: $title, axis: .vertical)
                         .font(.title3.weight(.medium))
+                        .accessibilityIdentifier("task-title")
                     TextField("备注", text: $notes, axis: .vertical)
-                        .lineLimit(3...6)
+                        .lineLimit(3...8)
+                        .accessibilityIdentifier("task-notes")
                 }
                 Section("时间") {
                     Toggle("安排日期", isOn: $hasSchedule)
+                        .accessibilityIdentifier("task-schedule-toggle")
                     if hasSchedule {
                         Button { pickingSchedule = true } label: {
                             LabeledContent("计划") { Text(scheduledDate.formatted(.dateTime.month().day().weekday(.abbreviated))) }
                         }
                         .foregroundStyle(.primary)
+                        .accessibilityIdentifier("task-schedule-date")
                     }
                     Toggle("截止日期", isOn: $hasDueDate)
                     if hasDueDate {
@@ -94,19 +98,26 @@ struct PhoneTaskEditor: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("保存") { save() }.disabled(!canSave) }
+                ToolbarItem(placement: .confirmationAction) { Button("保存") { save() }.disabled(!canSave).accessibilityIdentifier("task-save") }
             }
+            .scrollDismissesKeyboard(.interactively)
             .onAppear(perform: load)
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("--open-date") else { return }
+                try? await Task.sleep(for: .milliseconds(450))
+                hasSchedule = true
+                pickingSchedule = true
+            }
             .onChange(of: goalID) { _, id in
                 if let goal = store.goals.first(where: { $0.id == id }) { areaID = goal.areaID }
             }
             .onChange(of: areaID) { _, id in
                 if let goal = store.goals.first(where: { $0.id == goalID }), let goalArea = goal.areaID, goalArea != id { goalID = nil }
             }
-            .sheet(isPresented: $pickingSchedule) {
+            .fullScreenCover(isPresented: $pickingSchedule) {
                 PhoneDateSheet(date: $scheduledDate) { hasSchedule = false; pickingSchedule = false }
             }
-            .sheet(isPresented: $pickingDue) {
+            .fullScreenCover(isPresented: $pickingDue) {
                 PhoneDateSheet(date: $dueDate) { hasDueDate = false; pickingDue = false }
             }
             .confirmationDialog("删除这项任务？", isPresented: $confirmDelete, titleVisibility: .visible) {
@@ -166,10 +177,13 @@ struct PhoneDateSheet: View {
 
     var body: some View {
         NavigationStack {
-            DatePicker("日期", selection: $date, displayedComponents: .date)
-                .datePickerStyle(.graphical)
-                .labelsHidden()
-                .padding(.horizontal, 12)
+            ScrollView {
+                DatePicker("日期", selection: $date, displayedComponents: .date)
+                    .datePickerStyle(.graphical)
+                    .labelsHidden()
+                    .padding(.horizontal, 8)
+                    .accessibilityIdentifier("date-picker")
+            }
                 .navigationTitle("选择日期")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -181,7 +195,7 @@ struct PhoneDateSheet: View {
                     }
                 }
         }
-        .presentationDetents([.medium, .large])
+        .background(Color(.systemBackground))
     }
 }
 
@@ -217,6 +231,7 @@ struct PhoneGoalEditor: View {
                 Section {
                     TextField("目标", text: $title, axis: .vertical)
                         .font(.title3.weight(.medium))
+                        .accessibilityIdentifier("goal-title")
                     TextField("为什么重要", text: $notes, axis: .vertical)
                         .lineLimit(2...5)
                 }
@@ -273,8 +288,9 @@ struct PhoneGoalEditor: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("保存") { save() }.disabled(!canSave) }
+                ToolbarItem(placement: .confirmationAction) { Button("保存") { save() }.disabled(!canSave).accessibilityIdentifier("goal-save") }
             }
+            .scrollDismissesKeyboard(.interactively)
             .onAppear(perform: load)
             .onChange(of: kind) { _, value in if value == .longTerm { parentGoalID = nil } }
             .onChange(of: status) { _, value in if value == .completed { progress = 1 } }

@@ -27,6 +27,7 @@ struct PhoneTaskRow: View {
                         .strikethrough(task.isCompleted, color: .secondary)
                         .foregroundStyle(task.isCompleted ? .secondary : .primary)
                         .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                     let detail = PhoneTasks.meta(task, store: store)
                     if !detail.isEmpty {
                         Text(detail)
