@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import Observation
+import DaylineCore
 
 // Additive v1.1 entities. Existing entity schemas remain byte-for-byte unchanged.
 final class Idea: PersistentModel {

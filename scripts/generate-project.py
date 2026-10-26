@@ -27,8 +27,15 @@ obj('testGroup', f'isa = PBXGroup; name = Tests; children = {ids(tests)}; source
 obj('resourceGroup', f'isa = PBXGroup; name = Resources; children = {ids(resources+["Resources/Info.plist"])}; sourceTree = "<group>";')
 obj('products', f'isa = PBXGroup; name = Products; children = {ids(["appProduct", "testProduct"])}; sourceTree = "<group>";')
 obj('rootGroup', f'isa = PBXGroup; children = {ids(["sourceGroup","testGroup","resourceGroup","README.md","products"])}; sourceTree = "<group>";')
-for key, paths, phase in [('appSources',sources,'PBXSourcesBuildPhase'),('testSources',tests,'PBXSourcesBuildPhase'),('appResources',resources,'PBXResourcesBuildPhase'),('appFrameworks',[],'PBXFrameworksBuildPhase'),('testFrameworks',[],'PBXFrameworksBuildPhase')]:
+for key, paths, phase in [('appSources', sources, 'PBXSourcesBuildPhase'), ('testSources', tests, 'PBXSourcesBuildPhase'), ('appResources', resources, 'PBXResourcesBuildPhase')]:
     obj(key, f'isa = {phase}; buildActionMask = 2147483647; files = {ids(["build:"+p for p in paths]) if paths else "()"}; runOnlyForDeploymentPostprocessing = 0;')
+obj('appFrameworks', f'isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = {ids(["build:DaylineCore"])}; runOnlyForDeploymentPostprocessing = 0;')
+obj('testFrameworks', f'isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = {ids(["build:DaylineCoreTests"])}; runOnlyForDeploymentPostprocessing = 0;')
+obj('build:DaylineCore', f'isa = PBXBuildFile; productRef = {uid("pkg:DaylineCore")};')
+obj('build:DaylineCoreTests', f'isa = PBXBuildFile; productRef = {uid("pkg:DaylineCoreTests")};')
+obj('pkg:DaylineCore', f'isa = XCSwiftPackageProductDependency; package = {uid("localpkg")}; productName = DaylineCore;')
+obj('pkg:DaylineCoreTests', f'isa = XCSwiftPackageProductDependency; package = {uid("localpkg")}; productName = DaylineCore;')
+obj('localpkg', 'isa = XCLocalSwiftPackageReference; relativePath = Packages/DaylineCore;')
 common = {'SDKROOT':'macosx','MACOSX_DEPLOYMENT_TARGET':'14.0','SWIFT_VERSION':'5.0','CLANG_ENABLE_MODULES':'YES','CODE_SIGN_STYLE':'Automatic','CODE_SIGN_IDENTITY':'-','COMBINE_HIDPI_IMAGES':'YES'}
 for scope in ['project','app','test']:
     for mode in ['Debug','Release']:
@@ -44,9 +51,9 @@ for scope in ['project','app','test']:
     obj(scope+'Configs', f'isa = XCConfigurationList; buildConfigurations = {ids([scope+"Debug",scope+"Release"])}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')
 obj('proxy', f'isa = PBXContainerItemProxy; containerPortal = {uid("project")}; proxyType = 1; remoteGlobalIDString = {uid("app")}; remoteInfo = Dayline;')
 obj('dependency', f'isa = PBXTargetDependency; target = {uid("app")}; targetProxy = {uid("proxy")};')
-obj('app', f'isa = PBXNativeTarget; buildConfigurationList = {uid("appConfigs")}; buildPhases = {ids(["appSources","appFrameworks","appResources"])}; buildRules = (); dependencies = (); name = Dayline; productName = Dayline; productReference = {uid("appProduct")}; productType = "com.apple.product-type.application";')
-obj('test', f'isa = PBXNativeTarget; buildConfigurationList = {uid("testConfigs")}; buildPhases = {ids(["testSources","testFrameworks"])}; buildRules = (); dependencies = {ids(["dependency"])}; name = DaylineTests; productName = DaylineTests; productReference = {uid("testProduct")}; productType = "com.apple.product-type.bundle.unit-test";')
-obj('project', f'isa = PBXProject; attributes = {{ LastUpgradeCheck = 1600; }}; buildConfigurationList = {uid("projectConfigs")}; compatibilityVersion = "Xcode 14.0"; developmentRegion = zh_CN; hasScannedForEncodings = 0; knownRegions = (en, zh_CN, Base); mainGroup = {uid("rootGroup")}; productRefGroup = {uid("products")}; projectDirPath = ""; projectRoot = ""; targets = {ids(["app","test"])};')
+obj('app', f'isa = PBXNativeTarget; buildConfigurationList = {uid("appConfigs")}; buildPhases = {ids(["appSources","appFrameworks","appResources"])}; buildRules = (); dependencies = (); name = Dayline; packageProductDependencies = {ids(["pkg:DaylineCore"])}; productName = Dayline; productReference = {uid("appProduct")}; productType = "com.apple.product-type.application";')
+obj('test', f'isa = PBXNativeTarget; buildConfigurationList = {uid("testConfigs")}; buildPhases = {ids(["testSources","testFrameworks"])}; buildRules = (); dependencies = {ids(["dependency"])}; name = DaylineTests; packageProductDependencies = {ids(["pkg:DaylineCoreTests"])}; productName = DaylineTests; productReference = {uid("testProduct")}; productType = "com.apple.product-type.bundle.unit-test";')
+obj('project', f'isa = PBXProject; attributes = {{ LastUpgradeCheck = 1600; }}; buildConfigurationList = {uid("projectConfigs")}; compatibilityVersion = "Xcode 14.0"; developmentRegion = zh_CN; hasScannedForEncodings = 0; knownRegions = (en, zh_CN, Base); mainGroup = {uid("rootGroup")}; packageReferences = {ids(["localpkg"])}; productRefGroup = {uid("products")}; projectDirPath = ""; projectRoot = ""; targets = {ids(["app","test"])};')
 (project/'project.pbxproj').write_text('// !$*UTF8*$!\n{\n\tarchiveVersion = 1;\n\tclasses = {};\n\tobjectVersion = 56;\n\tobjects = {\n'+'\n'.join(objects)+'\n\t};\n\trootObject = '+uid('project')+';\n}\n')
 scheme_dir = project/'xcshareddata/xcschemes'
 scheme_dir.mkdir(parents=True, exist_ok=True)

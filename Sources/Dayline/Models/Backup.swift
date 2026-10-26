@@ -1,4 +1,5 @@
 import Foundation
+import DaylineCore
 
 enum DaylineDataError: LocalizedError {
     case invalid(String)

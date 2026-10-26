@@ -1,4 +1,5 @@
 import SwiftUI
+import DaylineCore
 
 struct DaylineTaskEditor: View {
     @Environment(DaylineStore.self) private var store
