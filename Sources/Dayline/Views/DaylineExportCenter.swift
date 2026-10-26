@@ -98,9 +98,9 @@ struct DaylineExportCenter: View {
                 ForEach(PlanRange.allCases, id: \.self) { Text($0.rawValue).tag($0) }
             }
             if range != .today {
-                HStack {
-                    DatePicker(range == .day ? "日期" : "开始", selection: $start, displayedComponents: .date)
-                    if range == .custom { DatePicker("结束", selection: $end, displayedComponents: .date) }
+                HStack(spacing: 18) {
+                    labeledDate(range == .day ? "日期" : "开始", date: $start, identifier: "exportStartDate")
+                    if range == .custom { labeledDate("结束", date: $end, identifier: "exportEndDate") }
                 }
             }
             Text(DaylineExporter.attribution + " 包括已完成任务和无计划的日期。")
@@ -137,6 +137,13 @@ struct DaylineExportCenter: View {
             }
             Text("将导出 \(chosenIdeas.count) 条灵感\(ideaScope == .all ? "（包含已归档）" : "")")
                 .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private func labeledDate(_ title: String, date: Binding<Date>, identifier: String) -> some View {
+        HStack(spacing: 8) {
+            Text(title).foregroundStyle(.secondary)
+            DaylineDateField(date: date, label: title, identifier: identifier, allowsClear: false)
         }
     }
 

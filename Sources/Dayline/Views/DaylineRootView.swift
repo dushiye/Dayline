@@ -171,6 +171,9 @@ struct DaylineRootView: View {
         .sheet(item: $goalEditor) { request in
             DaylineGoalEditor(request: request).environment(store)
         }
+        .onAppear { openQADatePreviewIfRequested() }
+        .onChange(of: store.tasks.count) { _, _ in openQADatePreviewIfRequested() }
+        .onChange(of: store.goals.count) { _, _ in openQADatePreviewIfRequested() }
         .alert("无法完成操作", isPresented: Binding(get: { localError != nil || store.errorMessage != nil }, set: { if !$0 { localError = nil; store.errorMessage = nil } })) {
             Button("知道了") { localError = nil; store.errorMessage = nil }
         } message: { Text(localError ?? store.errorMessage ?? "请重试。") }
@@ -563,6 +566,21 @@ struct DaylineRootView: View {
         if selection == .today { date = .now }
         if selection == .upcoming { date = selectedUpcomingDay ?? .now }
         taskEditor = TaskEditorRequest(areaID: selectedArea?.id, scheduledDate: date)
+    }
+
+    private func openQADatePreviewIfRequested() {
+        let process = ProcessInfo.processInfo
+        guard process.arguments.contains("--qa-store") else { return }
+        if process.environment["DAYLINE_OPEN_GOAL_DATE"] == "1", goalEditor == nil,
+           let goal = store.goals.first(where: { $0.targetDate != nil }) ?? store.goals.first {
+            selection = .goals
+            goalEditor = GoalEditorRequest(goal: goal)
+        }
+        if process.environment["DAYLINE_OPEN_TASK_DATE"] == "1", taskEditor == nil,
+           let task = store.tasks.first(where: { $0.scheduledDate != nil }) ?? store.tasks.first {
+            selection = .today
+            taskEditor = TaskEditorRequest(task: task)
+        }
     }
     private func toggle(_ task: DayTask) {
         let willComplete = !task.isCompleted
