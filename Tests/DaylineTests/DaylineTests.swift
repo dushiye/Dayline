@@ -1,4 +1,5 @@
 import XCTest
+import DaylineCore
 @testable import Dayline
 
 final class DaylineTests: XCTestCase {
@@ -61,6 +62,9 @@ final class DaylineTests: XCTestCase {
 
     func testDateGridAndTimeZoneDay() throws { try DatePickerChecks.gridAndTimeZone() }
     @MainActor func testGoalTargetDateRoundTripsOnIsolatedStore() throws { try DatePickerChecks.goalDateRoundTrip() }
+    @MainActor func testSameBusinessUUIDIsNotOnePersistentObject() throws { try SharedCoreChecks.sameBusinessUUIDIsNotOnePersistentObject() }
+    @MainActor func testLegacyFixtureEditRoundTrip() throws { try SharedCoreChecks.legacyFixtureEditRoundTrip() }
+    @MainActor func testTwoStoresShareSuccessorButNotPersistentIdentity() throws { try SharedCoreChecks.twoStoresShareSuccessorButNotPersistentIdentity() }
 
     func testExportRenderingAndFileSafety() throws {
         try ExportChecks.run(directory: try temporaryExportDirectory("rendering"))
