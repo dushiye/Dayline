@@ -4,6 +4,7 @@ import SwiftData
 @testable import Dayline
 #endif
 import DaylineCore
+import DaylineData
 
 @MainActor
 enum SharedCoreChecks {

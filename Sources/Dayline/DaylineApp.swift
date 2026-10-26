@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import AppKit
+import DaylineData
 
 @main
 struct DaylineApp: App {

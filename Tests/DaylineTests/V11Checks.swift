@@ -4,6 +4,7 @@ import SwiftData
 import Observation
 import SQLite3
 import Darwin
+import DaylineData
 #if canImport(Dayline)
 @testable import Dayline
 #endif

@@ -1,30 +1,30 @@
 import Foundation
 import DaylineCore
 
-enum DaylineDataError: LocalizedError {
+public enum DaylineDataError: LocalizedError {
     case invalid(String)
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self { case .invalid(let message): return message }
     }
 }
 
-struct DaylineBackup: Codable {
-    var schemaVersion: Int = 2
-    var exportedAt: Date = Date()
-    var areas: [AreaRecord]
-    var goals: [GoalRecord]
-    var tasks: [TaskRecord]
-    var ideas: [IdeaRecord] = []
-    var planningEvents: [PlanningEventRecord] = []
+public struct DaylineBackup: Codable {
+    public var schemaVersion: Int = 2
+    public var exportedAt: Date = Date()
+    public var areas: [AreaRecord]
+    public var goals: [GoalRecord]
+    public var tasks: [TaskRecord]
+    public var ideas: [IdeaRecord] = []
+    public var planningEvents: [PlanningEventRecord] = []
 
-    init(schemaVersion: Int = 2, exportedAt: Date = Date(), areas: [AreaRecord], goals: [GoalRecord],
+    public init(schemaVersion: Int = 2, exportedAt: Date = Date(), areas: [AreaRecord], goals: [GoalRecord],
          tasks: [TaskRecord], ideas: [IdeaRecord] = [], planningEvents: [PlanningEventRecord] = []) {
         self.schemaVersion = schemaVersion; self.exportedAt = exportedAt
         self.areas = areas; self.goals = goals; self.tasks = tasks
         self.ideas = ideas; self.planningEvents = planningEvents
     }
     enum CodingKeys: String, CodingKey { case schemaVersion, exportedAt, areas, goals, tasks, ideas, planningEvents }
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion = try c.decode(Int.self, forKey: .schemaVersion)
         exportedAt = try c.decode(Date.self, forKey: .exportedAt)
@@ -40,20 +40,20 @@ struct DaylineBackup: Codable {
         }
     }
 
-    static func encoder() -> JSONEncoder {
+    public static func encoder() -> JSONEncoder {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .millisecondsSince1970
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return encoder
     }
 
-    static func decoder() -> JSONDecoder {
+    public static func decoder() -> JSONDecoder {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .millisecondsSince1970
         return decoder
     }
 
-    func validate() throws {
+    public func validate() throws {
         func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
             if !condition() { throw DaylineDataError.invalid(message) }
         }
@@ -157,18 +157,18 @@ struct DaylineBackup: Codable {
     }
 }
 
-struct AreaRecord: Codable {
-    var id: UUID; var name: String; var symbol: String; var colorKey: String; var sortOrder: Int
-    init(_ area: Area) {
+public struct AreaRecord: Codable {
+    public var id: UUID; public var name: String; public var symbol: String; public var colorKey: String; public var sortOrder: Int
+    public init(_ area: Area) {
         id = area.id; name = area.name; symbol = area.symbol; colorKey = area.colorKey; sortOrder = area.sortOrder
     }
-    func model() -> Area { Area(id: id, name: name, symbol: symbol, colorKey: colorKey, sortOrder: sortOrder) }
+    public func model() -> Area { Area(id: id, name: name, symbol: symbol, colorKey: colorKey, sortOrder: sortOrder) }
 }
 
-struct GoalRecord: Codable {
-    var id: UUID; var title: String; var notes: String; var kind: GoalKind; var status: GoalStatus
-    var targetDate: Date?; var progress: Double; var areaID: UUID?; var parentGoalID: UUID?; var createdAt: Date
-    init(_ goal: Goal) throws {
+public struct GoalRecord: Codable {
+    public var id: UUID; public var title: String; public var notes: String; public var kind: GoalKind; public var status: GoalStatus
+    public var targetDate: Date?; public var progress: Double; public var areaID: UUID?; public var parentGoalID: UUID?; public var createdAt: Date
+    public init(_ goal: Goal) throws {
         guard let kind = GoalKind(rawValue: goal.kindRaw), let status = GoalStatus(rawValue: goal.statusRaw) else {
             throw DaylineDataError.invalid("目标类型或状态无效。")
         }
@@ -176,18 +176,18 @@ struct GoalRecord: Codable {
         targetDate = goal.targetDate; progress = goal.progress; areaID = goal.areaID
         parentGoalID = goal.parentGoalID; createdAt = goal.createdAt
     }
-    func model() -> Goal {
+    public func model() -> Goal {
         Goal(id: id, title: title, notes: notes, kind: kind, status: status, targetDate: targetDate,
              progress: progress, areaID: areaID, parentGoalID: parentGoalID, createdAt: createdAt)
     }
 }
 
-struct TaskRecord: Codable {
-    var id: UUID; var title: String; var notes: String; var areaID: UUID?; var goalID: UUID?
-    var scheduledDate: Date?; var dueDate: Date?; var isCompleted: Bool; var completedAt: Date?
-    var priority: TaskPriority; var sortOrder: Double; var repeatRule: RepeatRule; var createdAt: Date
-    var recurrenceSourceID: UUID?; var recurrenceOccurrenceDate: Date?; var recurrenceSuccessorID: UUID?
-    init(_ task: DayTask) throws {
+public struct TaskRecord: Codable {
+    public var id: UUID; public var title: String; public var notes: String; public var areaID: UUID?; public var goalID: UUID?
+    public var scheduledDate: Date?; public var dueDate: Date?; public var isCompleted: Bool; public var completedAt: Date?
+    public var priority: TaskPriority; public var sortOrder: Double; public var repeatRule: RepeatRule; public var createdAt: Date
+    public var recurrenceSourceID: UUID?; public var recurrenceOccurrenceDate: Date?; public var recurrenceSuccessorID: UUID?
+    public init(_ task: DayTask) throws {
         guard let priority = TaskPriority(rawValue: task.priorityRaw), let rule = RepeatRule(rawValue: task.repeatRuleRaw) else {
             throw DaylineDataError.invalid("任务优先级或重复规则无效。")
         }
@@ -197,7 +197,7 @@ struct TaskRecord: Codable {
         repeatRule = rule; createdAt = task.createdAt; recurrenceSourceID = task.recurrenceSourceID
         recurrenceOccurrenceDate = task.recurrenceOccurrenceDate; recurrenceSuccessorID = task.recurrenceSuccessorID
     }
-    func model() -> DayTask {
+    public func model() -> DayTask {
         DayTask(id: id, title: title, notes: notes, areaID: areaID, scheduledDate: scheduledDate,
                 dueDate: dueDate, goalID: goalID, isCompleted: isCompleted, completedAt: completedAt,
                 priority: priority, sortOrder: sortOrder, repeatRule: repeatRule, createdAt: createdAt,
@@ -206,7 +206,7 @@ struct TaskRecord: Codable {
     }
 }
 
-enum DaylineSeeds {
+public enum DaylineSeeds {
     static let areas: [(id: UUID, name: String, symbol: String, colorKey: String, sortOrder: Int)] = [
         (UUID(uuidString: "6BD2196D-CEEA-443E-B134-000000000001")!, "Learning", "book.closed", "blue", 0),
         (UUID(uuidString: "6BD2196D-CEEA-443E-B134-000000000002")!, "Research", "sparkle.magnifyingglass", "purple", 1),

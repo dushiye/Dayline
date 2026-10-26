@@ -3,20 +3,20 @@ import SwiftData
 import Observation
 import DaylineCore
 
-@MainActor @Observable final class DaylineStore {
-    let container: ModelContainer
+@MainActor @Observable public final class DaylineStore {
+    public let container: ModelContainer
     private let context: ModelContext
-    var tasks: [DayTask] = []
-    var goals: [Goal] = []
-    var areas: [Area] = []
-    var ideas: [Idea] = []
-    var planningEvents: [PlanningEventRecord] = []
-    var errorMessage: String?
+    public var tasks: [DayTask] = []
+    public var goals: [Goal] = []
+    public var areas: [Area] = []
+    public var ideas: [Idea] = []
+    public var planningEvents: [PlanningEventRecord] = []
+    public var errorMessage: String?
     private var committedTasks: [UUID: TaskRecord] = [:]
     private var historySequence = 0
     private let automaticBackupDirectory: URL?
 
-    init(container: ModelContainer, automaticBackupDirectory: URL? = nil) throws {
+    public init(container: ModelContainer, automaticBackupDirectory: URL? = nil) throws {
         self.container = container
         self.automaticBackupDirectory = automaticBackupDirectory
         self.context = container.mainContext
@@ -35,7 +35,11 @@ import DaylineCore
         runDailyBackup()
     }
 
-    static func makeContainer(inMemory: Bool = false, url: URL? = nil) throws -> ModelContainer {
+    /// Local SwiftData container. Views and planning rules do not choose a sync backend.
+    /// `cloudKitDatabase` stays `.none` until a separate schema upgrade. Passing no URL on
+    /// macOS still opens `~/Library/Application Support/Dayline/Dayline.store`. iOS must pass
+    /// its own sandbox URL and must never pass that Mac path.
+    public static func makeContainer(inMemory: Bool = false, url: URL? = nil) throws -> ModelContainer {
         let schema = Schema([Area.self, Goal.self, DayTask.self, Idea.self, PlanningEventEntity.self])
         let configuration: ModelConfiguration
         if inMemory {
@@ -57,7 +61,7 @@ import DaylineCore
         return try ModelContainer(for: schema, configurations: [configuration])
     }
 
-    func refresh() throws {
+    public func refresh() throws {
         // Publish only once all fetches have succeeded, keeping a coherent UI on read failure.
         let newAreas = try context.fetch(FetchDescriptor<Area>()).sorted {
             $0.sortOrder == $1.sortOrder ? $0.id.uuidString < $1.id.uuidString : $0.sortOrder < $1.sortOrder
@@ -78,12 +82,12 @@ import DaylineCore
         ideas = newIdeas; planningEvents = newEvents
     }
 
-    func save() {
+    public func save() {
         do { try commit() } catch { reportAndRollback(error) }
     }
 
     @discardableResult
-    func addTask(title: String, areaID: UUID? = nil, scheduledDate: Date? = nil, dueDate: Date? = nil,
+    public func addTask(title: String, areaID: UUID? = nil, scheduledDate: Date? = nil, dueDate: Date? = nil,
                  goalID: UUID? = nil, notes: String = "", priority: TaskPriority = .none,
                  repeatRule: RepeatRule = .none) -> DayTask? {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -104,7 +108,7 @@ import DaylineCore
         do { try commit(); return task } catch { reportAndRollback(error); return nil }
     }
 
-    func toggleTask(_ task: DayTask) {
+    public func toggleTask(_ task: DayTask) {
         guard owns(task) else { return }
         task.isCompleted.toggle()
         task.completedAt = task.isCompleted ? Date() : nil
@@ -112,20 +116,20 @@ import DaylineCore
         save()
     }
 
-    func deleteTask(_ task: DayTask) {
+    public func deleteTask(_ task: DayTask) {
         guard owns(task) else { return }
         context.delete(task)
         // Predecessor successor IDs intentionally survive as deletion tombstones.
         save()
     }
 
-    func reschedule(_ task: DayTask, to date: Date?) {
+    public func reschedule(_ task: DayTask, to date: Date?) {
         guard owns(task) else { return }
         task.scheduledDate = date.map { Calendar.current.startOfDay(for: $0) }
         save()
     }
 
-    func reorderTasks(_ orderedIDs: [UUID]) {
+    public func reorderTasks(_ orderedIDs: [UUID]) {
         guard Set(orderedIDs).count == orderedIDs.count,
               orderedIDs.allSatisfy({ id in tasks.contains { $0.id == id } }) else {
             errorMessage = "排序包含重复或不存在的任务。"; return
@@ -143,7 +147,7 @@ import DaylineCore
     }
 
     @discardableResult
-    func addGoal(title: String, kind: GoalKind, areaID: UUID?, parentGoalID: UUID? = nil,
+    public func addGoal(title: String, kind: GoalKind, areaID: UUID?, parentGoalID: UUID? = nil,
                  notes: String = "", targetDate: Date? = nil, progress: Double = 0,
                  status: GoalStatus = .active) -> Goal? {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -165,7 +169,7 @@ import DaylineCore
         do { try commit(); return goal } catch { reportAndRollback(error); return nil }
     }
 
-    func deleteGoal(_ goal: Goal) {
+    public func deleteGoal(_ goal: Goal) {
         guard goals.contains(where: { $0 === goal }) else { errorMessage = "该目标已不在当前数据库中。"; return }
         for task in tasks where task.goalID == goal.id { task.goalID = nil }
         for idea in ideas where idea.goalID == goal.id { idea.goalID = nil }
@@ -174,7 +178,7 @@ import DaylineCore
         save()
     }
 
-    func setGoalStatus(_ goal: Goal, to status: GoalStatus) {
+    public func setGoalStatus(_ goal: Goal, to status: GoalStatus) {
         guard goals.contains(where: { $0 === goal }) else { errorMessage = "该目标已不在当前数据库中。"; return }
         goal.status = status
         // This is an explicit user outcome decision, independent of linked task counts.
@@ -182,13 +186,13 @@ import DaylineCore
         save()
     }
 
-    func exportBackup() throws -> Data {
+    public func exportBackup() throws -> Data {
         let backup = try snapshot()
         try backup.validate()
         return try DaylineBackup.encoder().encode(backup)
     }
 
-    func restoreBackup(_ data: Data) throws {
+    public func restoreBackup(_ data: Data) throws {
         let backup: DaylineBackup
         do {
             guard data.count <= 100 * 1024 * 1024 else { throw DaylineDataError.invalid("备份文件超过 100 MB。") }
@@ -244,7 +248,7 @@ import DaylineCore
         }
     }
 
-    func loadDemoData() {
+    public func loadDemoData() {
         let learning = DaylineSeeds.areas[0].id
         let research = DaylineSeeds.areas[1].id
         let health = DaylineSeeds.areas[2].id
@@ -277,37 +281,37 @@ import DaylineCore
     }
 
     @discardableResult
-    func addIdea(title: String = "新灵感", body: String = "", areaID: UUID? = nil, goalID: UUID? = nil) -> Idea? {
+    public func addIdea(title: String = "新灵感", body: String = "", areaID: UUID? = nil, goalID: UUID? = nil) -> Idea? {
         let idea = Idea(title: title, body: body, areaID: areaID, goalID: goalID)
         context.insert(idea)
         do { try commit(); return idea } catch { reportAndRollback(error); return nil }
     }
 
-    func updateIdea(_ idea: Idea, title: String, body: String, areaID: UUID?, goalID: UUID?) {
+    public func updateIdea(_ idea: Idea, title: String, body: String, areaID: UUID?, goalID: UUID?) {
         guard ideas.contains(where: { $0 === idea }) else { return }
         idea.title = title; idea.body = body; idea.areaID = areaID; idea.goalID = goalID
         idea.updatedAt = Date()
         save()
     }
-    func setIdeaPinned(_ idea: Idea, to value: Bool) {
+    public func setIdeaPinned(_ idea: Idea, to value: Bool) {
         guard ideas.contains(where: { $0 === idea }) else { return }
         idea.isPinned = value; idea.updatedAt = Date(); save()
     }
-    func setIdeaArchived(_ idea: Idea, to value: Bool) {
+    public func setIdeaArchived(_ idea: Idea, to value: Bool) {
         guard ideas.contains(where: { $0 === idea }) else { return }
         idea.isArchived = value; idea.updatedAt = Date(); save()
     }
-    func deleteIdea(_ idea: Idea) {
+    public func deleteIdea(_ idea: Idea) {
         guard ideas.contains(where: { $0 === idea }) else { return }
         context.delete(idea); save()
     }
     @discardableResult
-    func taskFromIdea(_ idea: Idea) -> DayTask? {
+    public func taskFromIdea(_ idea: Idea) -> DayTask? {
         let title = idea.title.trimmingCharacters(in: .whitespacesAndNewlines)
         return addTask(title: title.isEmpty ? "未命名灵感" : title, areaID: idea.areaID, goalID: idea.goalID, notes: idea.body)
     }
 
-    func runDailyBackup() {
+    public func runDailyBackup() {
         guard automaticBackupDirectory != nil else { return }
         do { try writeAutomaticBackup(name: "Dayline-Auto-\(Self.historyDay(Date())).json") }
         catch { errorMessage = "自动备份失败：\(error.localizedDescription)" }
@@ -456,19 +460,19 @@ import DaylineCore
     }
 }
 
-extension AreaRecord {
+public extension AreaRecord {
     func apply(to area: Area) {
         area.name = name; area.symbol = symbol; area.colorKey = colorKey; area.sortOrder = sortOrder
     }
 }
-extension GoalRecord {
+public extension GoalRecord {
     func apply(to goal: Goal) {
         goal.title = title; goal.notes = notes; goal.kind = kind; goal.status = status
         goal.targetDate = targetDate; goal.progress = progress; goal.areaID = areaID
         goal.parentGoalID = parentGoalID; goal.createdAt = createdAt
     }
 }
-extension TaskRecord {
+public extension TaskRecord {
     func apply(to task: DayTask) {
         task.title = title; task.notes = notes; task.areaID = areaID; task.goalID = goalID
         task.scheduledDate = scheduledDate; task.dueDate = dueDate; task.isCompleted = isCompleted

@@ -1,5 +1,6 @@
 import SwiftUI
 import DaylineCore
+import DaylineData
 
 struct DaylinePlanningSummary: View {
     let report: PlanningReport

@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import DaylineData
 
 struct DaylineExportCenter: View {
     @AppStorage("exportDirectory") private var lastExportDirectory = ""

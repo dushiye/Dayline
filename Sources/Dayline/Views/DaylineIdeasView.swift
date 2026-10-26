@@ -1,4 +1,5 @@
 import SwiftUI
+import DaylineData
 
 private enum IdeaFilter: String, CaseIterable, Identifiable {
     case active = "灵感", pinned = "置顶", archived = "归档", all = "全部"

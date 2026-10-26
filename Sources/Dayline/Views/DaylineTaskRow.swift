@@ -1,5 +1,6 @@
 import SwiftUI
 import DaylineCore
+import DaylineData
 
 struct DaylineTaskRow: View {
     let task: DayTask

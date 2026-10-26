@@ -2,6 +2,7 @@ import Foundation
 import DaylineCore
 import SwiftData
 import Observation
+import DaylineData
 #if canImport(Dayline)
 @testable import Dayline
 #endif

@@ -4,6 +4,7 @@ import CoreText
 import ImageIO
 import UniformTypeIdentifiers
 import Darwin
+import DaylineData
 
 extension DaylineExporter {
     static let pageSize = CGSize(width: 595.28, height: 841.89)

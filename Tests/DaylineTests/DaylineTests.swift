@@ -1,5 +1,6 @@
 import XCTest
 import DaylineCore
+import DaylineData
 @testable import Dayline
 
 final class DaylineTests: XCTestCase {

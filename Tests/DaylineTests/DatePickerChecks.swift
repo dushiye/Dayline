@@ -1,5 +1,6 @@
 import Foundation
 import DaylineCore
+import DaylineData
 #if canImport(Dayline)
 @testable import Dayline
 #endif

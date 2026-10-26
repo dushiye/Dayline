@@ -1,5 +1,6 @@
 import SwiftUI
 import DaylineCore
+import DaylineData
 
 // Quiet, system-native typography and surfaces adapt to the macOS appearance.
 enum DaylineDesign {

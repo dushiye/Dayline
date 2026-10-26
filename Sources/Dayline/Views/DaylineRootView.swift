@@ -3,6 +3,7 @@ import Combine
 import AppKit
 import UniformTypeIdentifiers
 import DaylineCore
+import DaylineData
 
 private enum DaylineDestination: Hashable {
     case today, upcoming, inbox, goals, ideas, area(UUID)

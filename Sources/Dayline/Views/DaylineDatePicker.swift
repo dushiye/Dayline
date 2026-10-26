@@ -1,5 +1,6 @@
 import SwiftUI
 import DaylineCore
+import DaylineData
 
 struct DaylineDateField: View {
     @Binding var date: Date

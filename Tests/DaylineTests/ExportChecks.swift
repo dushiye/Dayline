@@ -2,6 +2,7 @@ import Foundation
 import DaylineCore
 import PDFKit
 import ImageIO
+import DaylineData
 #if canImport(Dayline)
 @testable import Dayline
 #endif

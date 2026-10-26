@@ -1,10 +1,10 @@
 import Foundation
 import SQLite3
 
-enum DaylineSafetyBackup {
+public enum DaylineSafetyBackup {
     /// SQLite's online backup includes committed WAL content, even if another reader is open.
     /// Never delete/recreate the source store if migration or backup fails.
-    static func beforeUpgrade(at source: URL) throws {
+    public static func beforeUpgrade(at source: URL) throws {
         guard FileManager.default.fileExists(atPath: source.path) else { return }
         let destination = source.deletingLastPathComponent()
             .appendingPathComponent(source.lastPathComponent + ".before-v1.1.sqlite")
