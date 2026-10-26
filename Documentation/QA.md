@@ -18,7 +18,17 @@ Git 标签 `v1.1.0-baseline` 引用的是本节已有验收，不是打标签时
 | 正式库 | 测试前后比较 `Dayline.store`、WAL、SHM、`Dayline.store.before-v1.1.sqlite` 和 `Automatic Backups/` 的大小、修改时间与 SHA-256，全部一致 |
 | 界面 | 隔离库 Debug 窗口中打开目标日历（浅色、深色）和任务计划日期日历。用户已确认视觉效果。截图在 `Documentation/Screenshots/date-picker-light.png`、`date-picker-dark.png`、`date-picker-task-light.png` |
 
-版本号仍是 **1.1.0（build 2）**。这次没有创建 `v1.1.1` 标签，也没有安装。
+合并到 `main` 时版本号仍是 **1.1.0（build 2）**，当时还没有创建 `v1.1.1` 标签。随后的安装和发布见下一节。
+
+## v1.1.1 发布（2026-10-26）
+
+版本 **1.1.1（build 3）**。Bundle Identifier 仍是 `app.dayline.mac`。Release 产物为 ad-hoc 签名，`codesign --verify --deep --strict` 通过。
+
+发布前再次执行完整 XCTest：**44/44 通过，0 失败**。在桌面目录直接跑测试时，读取 `Tests/Fixtures/v1-backup.json` 曾被文件提供程序卡住；同一份源码复制到本地磁盘后的完整套件 1.5 秒内通过。原有 42 项都在通过列表中。
+
+安装前退出正在运行的 Dayline，并把 `~/Applications/Dayline.app` 改名为 `~/Applications/Dayline-1.1.0-build2-20261026-082850.app`。新版安装到原来的 `~/Applications/Dayline.app`。数据库目录没有移动。退出后的一致副本在 `~/Library/Application Support/Dayline/Manual-Backups/before-v1.1.1-20261026-082850/`。
+
+启动安装版后，Today、即将到来、收件箱、目标、灵感都能打开。新建目标时打开了新日历，选中今天并显示圆环；随后点「取消」，没有保存。记录身份在升级前后一致：领域 3、目标 2、任务 4、灵感 0、计划事件 4。升级快照 `Dayline.store.before-v1.1.sqlite` 与两份自动 JSON 备份的 SHA-256 没有变化。灵感在升级前就是 0 条。
 
 ## v1.1 增量验收（2026-10-25）
 
