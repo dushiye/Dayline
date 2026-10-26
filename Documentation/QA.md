@@ -4,6 +4,22 @@
 
 Git 标签 `v1.1.0-baseline` 引用的是本节已有验收，不是打标签时重新执行的测试。建立仓库时没有再次运行 XCTest，也没有启动正式数据库。原始日志留在本地 `build/`，不纳入 Git。后续提交若声称测试通过，必须写明当次实际运行的命令和结果。
 
+## 日期选择器（2026-10-26）
+
+目标日期、任务计划日期、任务截止日期和导出起止日期共用 `DaylineDateField`。弹层宽 344 pt。选中日为实心圆，今天为圆环。点选后保存为本机日历的当天零点并关闭弹层；清除会关闭任务或目标的日期开关。导出范围不提供清除。编辑器的「取消」只调用 `dismiss()`，不执行保存。
+
+合并到 `main` 前的当次结果：
+
+| 检查 | 已执行结果 |
+| --- | --- |
+| Release 构建 | Xcode 27.1，scheme `Dayline`，`platform=macOS,arch=arm64`，DerivedData 为 `~/Library/Caches/DaylineXcodeDerivedData`，配置 Release：**BUILD SUCCEEDED**。产物在 DerivedData，没有覆盖 `~/Applications/Dayline.app` |
+| Xcode XCTest | **44/44 通过，0 失败**。原有 42 项全部通过；新增 `testDateGridAndTimeZoneDay` 与 `testGoalTargetDateRoundTripsOnIsolatedStore` |
+| 隔离持久化 | 后一项在临时目录 `Dayline-DatePicker-<UUID>/Dayline.store` 中创建目标日期、重开、改期、清除并再次重开，不打开正式库 |
+| 正式库 | 测试前后比较 `Dayline.store`、WAL、SHM、`Dayline.store.before-v1.1.sqlite` 和 `Automatic Backups/` 的大小、修改时间与 SHA-256，全部一致 |
+| 界面 | 隔离库 Debug 窗口中打开目标日历（浅色、深色）和任务计划日期日历。用户已确认视觉效果。截图在 `Documentation/Screenshots/date-picker-light.png`、`date-picker-dark.png`、`date-picker-task-light.png` |
+
+版本号仍是 **1.1.0（build 2）**。这次没有创建 `v1.1.1` 标签，也没有安装。
+
 ## v1.1 增量验收（2026-10-25）
 
 版本 **1.1.0（build 2）**。本节为当前验收状态，下方 v1.0 记录完整保留作历史，旧版本的构建与图形结果不代表本轮复验。
