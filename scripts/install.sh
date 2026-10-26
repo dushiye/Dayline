@@ -1,17 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-if [[ ! -x build/Dayline.app/Contents/MacOS/Dayline ]]; then
-  ./scripts/build-app.sh release
-fi
 destination="$HOME/Applications/Dayline.app"
-mkdir -p "$HOME/Applications"
 if [[ -e "$destination" && "${DAYLINE_REPLACE_INSTALLED:-}" != "yes" ]]; then
   echo "error: refusing to replace $destination." >&2
   echo "Set DAYLINE_REPLACE_INSTALLED=yes to update this copy." >&2
   echo "The database in ~/Library/Application Support/Dayline is not modified." >&2
   exit 3
 fi
+./scripts/check-environment.sh
+./scripts/build-app.sh release
 if [[ -e "$destination" ]]; then
   backup="$HOME/Applications/Dayline-previous-$(date +%Y%m%d-%H%M%S).app"
   if [[ -e "$backup" ]]; then
@@ -21,7 +19,9 @@ if [[ -e "$destination" ]]; then
   mv "$destination" "$backup"
   echo "Previous app retained: $backup"
 fi
+mkdir -p "$HOME/Applications"
 ditto --norsrc --noextattr build/Dayline.app "$destination"
 codesign --verify --deep --strict "$destination"
 echo "Installed: $destination"
+echo "Built from the source in this checkout."
 echo "Your database is kept separately in ~/Library/Application Support/Dayline."

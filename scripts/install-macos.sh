@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copies a locally built Dayline.app to a destination the caller names.
+# Builds the current source, then copies Dayline.app to a path the caller names.
 # It never reads or writes ~/Library/Application Support/Dayline.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -9,8 +9,10 @@ usage() {
   cat <<'EOF'
 Usage: scripts/install-macos.sh /path/to/Dayline.app
 
-Copies the app built by scripts/build-macos.sh. It does not create or modify
-the personal database in ~/Library/Application Support/Dayline.
+Checks the environment, builds the Mac app from this checkout, then copies it.
+A later run after git pull therefore installs the updated source.
+It does not create or modify the personal database in
+~/Library/Application Support/Dayline.
 
 A new path, including a missing ~/Applications/Dayline.app, is created.
 Replacing an existing ~/Applications/Dayline.app requires
@@ -47,6 +49,13 @@ if [[ -e "$destination" ]]; then
     echo "Set DAYLINE_REPLACE_DESTINATION=yes to replace that copy." >&2
     exit 3
   fi
+fi
+
+# Build before moving any existing app, so a failed compile leaves that app in place.
+"$root/scripts/check-environment.sh"
+"$root/scripts/build-app.sh" release
+
+if [[ -e "$destination" ]]; then
   backup="${destination%.app}-previous-$(date +%Y%m%d-%H%M%S).app"
   if [[ -e "$backup" ]]; then
     echo "error: backup path already exists: $backup" >&2
@@ -56,18 +65,11 @@ if [[ -e "$destination" ]]; then
   echo "Previous app retained: $backup"
 fi
 
-if [[ ! -x "$root/build/Dayline.app/Contents/MacOS/Dayline" ]]; then
-  "$root/scripts/build-macos.sh"
-fi
-
 source_app="$(cd "$root/build/Dayline.app" && pwd -P)"
 mkdir -p "$(dirname "$destination")"
-if [[ -e "$destination" ]]; then
-  rm -rf "$destination"
-fi
 ditto --norsrc --noextattr "$source_app" "$destination"
 codesign --verify --deep --strict "$destination"
 echo "Installed copy: $destination"
+echo "Built from the source in this checkout."
 echo "Personal data was not read or changed."
-echo "First launch of a copy you built yourself uses a local ad-hoc signature."
-echo "Do not download an ad-hoc build from someone else and disable Gatekeeper to open it."
+echo "A copy you built on this Mac uses a local ad-hoc signature."

@@ -6,7 +6,7 @@ Cursor、Codex 和其他 Coding Agent 都遵守本文件。硬性禁令同时写
 
 Dayline is a local-first macOS app (SwiftUI, SwiftData, no third-party packages). iOS is experimental and does not sync with Mac. Open `Dayline.xcodeproj`, not the repository folder: the root `Package.swift` makes Xcode treat the folder as a Swift package.
 
-- Build and install with `scripts/check-environment.sh`, `scripts/build-macos.sh`, and `scripts/install-macos.sh`. The copy-paste prompt is in `docs/INSTALL_WITH_AI.md`.
+- Build and install with `scripts/check-environment.sh`, `scripts/build-macos.sh`, and `scripts/install-macos.sh`. `install-macos.sh` and `scripts/install.sh` compile the current checkout before copying the app. The copy-paste prompt is in `docs/INSTALL_WITH_AI.md`.
 - Tests use temporary stores. The Xcode `Dayline` scheme sets `DAYLINE_XCTEST_MODE=1`.
 - Never open, copy, replace, or delete `~/Library/Application Support/Dayline/`.
 - Never replace `~/Applications/Dayline.app` unless the user explicitly confirms.

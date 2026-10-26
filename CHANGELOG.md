@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Rebuild the current source before installing, so an update does not reuse an old app binary.
+- Put package products before dependencies so the current Swift tools can build the Mac app.
 - License the project under MIT.
 - Document source install, updates, and an agent install prompt.
 - Refuse to replace an existing app unless that replacement is confirmed.

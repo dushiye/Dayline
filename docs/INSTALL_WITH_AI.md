@@ -14,10 +14,13 @@ Read README.md, README_CN.md, and AGENTS.md before you change anything.
 Do this:
 1. Check macOS 14 or newer, Swift, and either Xcode or the Command Line Tools. Run scripts/check-environment.sh and stop if it fails. Explain the error in plain language.
 2. Clone or update the repository. Open Dayline.xcodeproj when you use Xcode. Do not open the repository folder as the project.
-3. Build with scripts/build-macos.sh. Do not use sudo.
+3. Build with scripts/build-macos.sh. Do not use sudo. If Xcode or the Command Line Tools are missing, explain that and ask before running xcode-select --install.
 4. If ~/Applications/Dayline.app does not exist, install with:
    scripts/install-macos.sh "$HOME/Applications/Dayline.app"
    If that app already exists, stop and ask me before setting DAYLINE_REPLACE_INSTALLED=yes. The script moves the previous app aside. It must not delete it.
+   install-macos.sh compiles the current checkout before copying, so an update is:
+   git pull
+   DAYLINE_REPLACE_INSTALLED=yes scripts/install-macos.sh "$HOME/Applications/Dayline.app"
 5. Verify the installed bundle with codesign --verify --deep --strict.
 6. Ask me before launching the app. If you launch it for a test, use a temporary database with --qa-store. Never launch it without that flag against my real library.
 7. Run the Mac tests if I ask for them:
@@ -32,7 +35,7 @@ Never do this:
 - Do not commit, push, change repository visibility, rewrite history, or force-push.
 - Do not change the MIT `LICENSE`.
 
-When you finish, tell me the installed path, how to update with git pull, and how to export a JSON backup from inside the app before I experiment.
+When you finish, tell me the installed path, how to open it, and how to update with git pull followed by install-macos.sh. Also tell me that 导出备份… in the sidebar menu writes a JSON copy.
 ```
 
 ## 中文提示词
@@ -45,10 +48,13 @@ When you finish, tell me the installed path, how to update with git pull, and ho
 按这个顺序做：
 1. 确认系统是 macOS 14 或更新版本，并且有 Swift，以及 Xcode 或 Command Line Tools。运行 scripts/check-environment.sh。失败就停下来，用普通人能看懂的话说明原因。
 2. 克隆或更新仓库。使用 Xcode 时打开 Dayline.xcodeproj，不要把仓库文件夹本身当成工程打开。
-3. 用 scripts/build-macos.sh 构建。不要使用 sudo。
+3. 用 scripts/build-macos.sh 构建。不要使用 sudo。如果缺少 Xcode 或 Command Line Tools，先说明，并等我同意后再运行 xcode-select --install。
 4. 如果 ~/Applications/Dayline.app 还不存在，执行：
    scripts/install-macos.sh "$HOME/Applications/Dayline.app"
    如果这个应用已经存在，先停下来问我，得到同意后再设置 DAYLINE_REPLACE_INSTALLED=yes。脚本只会把旧应用改名留在一旁，不能删除它。
+   install-macos.sh 会先按当前源码重新编译再复制。以后更新用：
+   git pull
+   DAYLINE_REPLACE_INSTALLED=yes scripts/install-macos.sh "$HOME/Applications/Dayline.app"
 5. 用 codesign --verify --deep --strict 检查装好的应用包。
 6. 启动应用之前先问我。如果只是测试能否启动，必须加上 --qa-store 并指向临时数据库。禁止在没有这个参数时启动，以免打开我的正式资料库。
 7. 只有我要求时才运行 Mac 测试：
@@ -63,5 +69,5 @@ When you finish, tell me the installed path, how to update with git pull, and ho
 - 不要提交、推送、修改仓库可见性、改写历史或强制推送。
 - 不要修改 MIT `LICENSE`。
 
-完成后告诉我安装路径、以后如何用 git pull 更新，以及做实验之前怎样在应用里导出 JSON 备份。
+完成后告诉我安装路径、怎么打开，以及以后怎样用 git pull 再运行 install-macos.sh 更新。也告诉我侧边栏菜单里的「导出备份…」会写出一份 JSON。
 ```
