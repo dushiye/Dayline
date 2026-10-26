@@ -1,4 +1,5 @@
 import Foundation
+import DaylineCore
 
 enum DaylineExportFormat: String, CaseIterable, Identifiable, Sendable {
     case pdf, markdown = "md", png

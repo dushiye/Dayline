@@ -1,25 +1,25 @@
 import Foundation
 
-enum PlanningEventKind: String, Codable {
+public enum PlanningEventKind: String, Codable {
     case baseline, planned, completed, reopened, rescheduled, deleted
 }
 
 /// Immutable observations. Never backdate a baseline when importing existing tasks.
-struct PlanningEventRecord: Codable, Identifiable {
-    var id: UUID
-    var taskID: UUID
-    var kind: PlanningEventKind
-    var occurredAt: Date
-    var dayKey: String?
-    var newDayKey: String?
-    var timeZoneID: String
-    var taskTitle: String
-    var areaID: UUID?
-    var recurrenceSourceID: UUID?
-    var occurrenceDate: Date?
-    var wasCompleted: Bool
+public struct PlanningEventRecord: Codable, Identifiable {
+    public var id: UUID
+    public var taskID: UUID
+    public var kind: PlanningEventKind
+    public var occurredAt: Date
+    public var dayKey: String?
+    public var newDayKey: String?
+    public var timeZoneID: String
+    public var taskTitle: String
+    public var areaID: UUID?
+    public var recurrenceSourceID: UUID?
+    public var occurrenceDate: Date?
+    public var wasCompleted: Bool
 
-    init(id: UUID = UUID(), taskID: UUID, kind: PlanningEventKind, occurredAt: Date,
+    public init(id: UUID = UUID(), taskID: UUID, kind: PlanningEventKind, occurredAt: Date,
          dayKey: String?, newDayKey: String? = nil, timeZoneID: String,
          taskTitle: String, areaID: UUID? = nil, recurrenceSourceID: UUID? = nil,
          occurrenceDate: Date? = nil, wasCompleted: Bool = false) {
@@ -31,56 +31,89 @@ struct PlanningEventRecord: Codable, Identifiable {
     }
 }
 
-struct PlanningDaySummary: Identifiable {
-    var id: String { dayKey }
-    let dayKey: String
+public struct PlanningDaySummary: Identifiable {
+    public var id: String { dayKey }
+    public let dayKey: String
     /// Unique tasks ever assigned to this day during observed history, including additions.
-    var planned = 0
+    public var planned = 0
     /// Tasks whose current, non-undone completion was observed on this local date.
     /// Includes unscheduled tasks; can exceed planned. Baseline completion is never inferred.
-    var actualCompleted = 0
+    public var actualCompleted = 0
     /// Morning-plan tasks completed no later than their plan date.
-    var originalCompleted = 0
-    var originalPlanned = 0
+    public var originalCompleted = 0
+    public var originalPlanned = 0
     /// First assigned on or after the plan date. Each task counts once per plan date.
-    var addedToday = 0
+    public var addedToday = 0
     /// Tasks currently moved away from this day. Returning clears this count.
-    var activelyRescheduled = 0
+    public var activelyRescheduled = 0
     /// Tasks deleted while assigned to this day. Restoring clears this count.
-    var deleted = 0
-    var isEffectivePlanDay = false
-    var hasPartialBaseline = false
-}
+    public var deleted = 0
+    public var isEffectivePlanDay = false
+    public var hasPartialBaseline = false
 
-struct PlanningWindowSummary {
-    let days: [PlanningDaySummary]
-    var dayCount: Int { days.count }
-    var planned: Int { days.reduce(0) { $0 + $1.planned } }
-    var actualCompleted: Int { days.reduce(0) { $0 + $1.actualCompleted } }
-    var originalCompleted: Int { days.reduce(0) { $0 + $1.originalCompleted } }
-    var originalPlanned: Int { days.reduce(0) { $0 + $1.originalPlanned } }
-    var addedToday: Int { days.reduce(0) { $0 + $1.addedToday } }
-    var activelyRescheduled: Int { days.reduce(0) { $0 + $1.activelyRescheduled } }
-    var deleted: Int { days.reduce(0) { $0 + $1.deleted } }
-    /// Comparable morning-plan adherence, not actualCompleted / planned.
-    var completionRate: Double? {
-        originalPlanned > 0 ? Double(originalCompleted) / Double(originalPlanned) : nil
+    public init(dayKey: String, planned: Int = 0, actualCompleted: Int = 0, originalCompleted: Int = 0,
+                originalPlanned: Int = 0, addedToday: Int = 0, activelyRescheduled: Int = 0,
+                deleted: Int = 0, isEffectivePlanDay: Bool = false, hasPartialBaseline: Bool = false) {
+        self.dayKey = dayKey
+        self.planned = planned
+        self.actualCompleted = actualCompleted
+        self.originalCompleted = originalCompleted
+        self.originalPlanned = originalPlanned
+        self.addedToday = addedToday
+        self.activelyRescheduled = activelyRescheduled
+        self.deleted = deleted
+        self.isEffectivePlanDay = isEffectivePlanDay
+        self.hasPartialBaseline = hasPartialBaseline
     }
 }
 
-struct PlanningCoachAdvice {
-    let hasEnoughHistory: Bool
-    let title: String
-    let message: String
-    let basisDayCount: Int
+public struct PlanningWindowSummary {
+    public let days: [PlanningDaySummary]
+    public var dayCount: Int { days.count }
+    public var planned: Int { days.reduce(0) { $0 + $1.planned } }
+    public var actualCompleted: Int { days.reduce(0) { $0 + $1.actualCompleted } }
+    public var originalCompleted: Int { days.reduce(0) { $0 + $1.originalCompleted } }
+    public var originalPlanned: Int { days.reduce(0) { $0 + $1.originalPlanned } }
+    public var addedToday: Int { days.reduce(0) { $0 + $1.addedToday } }
+    public var activelyRescheduled: Int { days.reduce(0) { $0 + $1.activelyRescheduled } }
+    public var deleted: Int { days.reduce(0) { $0 + $1.deleted } }
+    /// Comparable morning-plan adherence, not actualCompleted / planned.
+    public var completionRate: Double? {
+        originalPlanned > 0 ? Double(originalCompleted) / Double(originalPlanned) : nil
+    }
+
+    public init(days: [PlanningDaySummary]) { self.days = days }
 }
 
-struct PlanningReport {
-    let days: [PlanningDaySummary]
-    let recent7: PlanningWindowSummary
-    let recent14: PlanningWindowSummary
-    let recent30: PlanningWindowSummary
-    let coach: PlanningCoachAdvice
+public struct PlanningCoachAdvice {
+    public let hasEnoughHistory: Bool
+    public let title: String
+    public let message: String
+    public let basisDayCount: Int
+
+    public init(hasEnoughHistory: Bool, title: String, message: String, basisDayCount: Int) {
+        self.hasEnoughHistory = hasEnoughHistory
+        self.title = title
+        self.message = message
+        self.basisDayCount = basisDayCount
+    }
+}
+
+public struct PlanningReport {
+    public let days: [PlanningDaySummary]
+    public let recent7: PlanningWindowSummary
+    public let recent14: PlanningWindowSummary
+    public let recent30: PlanningWindowSummary
+    public let coach: PlanningCoachAdvice
+
+    public init(days: [PlanningDaySummary], recent7: PlanningWindowSummary, recent14: PlanningWindowSummary,
+                recent30: PlanningWindowSummary, coach: PlanningCoachAdvice) {
+        self.days = days
+        self.recent7 = recent7
+        self.recent14 = recent14
+        self.recent30 = recent30
+        self.coach = coach
+    }
 }
 
 /// Pure analysis: no task mutation, storage, network, or dependence on today's task snapshot.
@@ -90,7 +123,7 @@ struct PlanningReport {
 /// Identity is taskID: recurring occurrences must have their own task IDs; recurrenceSourceID
 /// is lineage, never a dedup key. Duplicate event IDs are ignored; same-time events retain
 /// input order, so callers must preserve append order. Undo uses inverse observations.
-enum PlanningAnalysis {
+public enum PlanningAnalysis {
     private struct Entry {
         var original: Bool
         var partialBaseline: Bool
@@ -102,7 +135,7 @@ enum PlanningAnalysis {
         var completion: PlanningEventRecord?
     }
 
-    static func dayKey(for date: Date, timeZone: TimeZone) -> String {
+    public static func dayKey(for date: Date, timeZone: TimeZone) -> String {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -111,7 +144,7 @@ enum PlanningAnalysis {
         return formatter.string(from: date)
     }
 
-    static func analyze(events: [PlanningEventRecord], asOf: Date = Date(),
+    public static func analyze(events: [PlanningEventRecord], asOf: Date = Date(),
                         timeZone: TimeZone = .current) -> PlanningReport {
         var seen = Set<UUID>()
         let ordered = events.enumerated().filter { $0.element.occurredAt <= asOf }

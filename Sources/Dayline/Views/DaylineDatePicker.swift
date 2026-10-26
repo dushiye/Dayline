@@ -1,49 +1,5 @@
 import SwiftUI
-
-/// Calendar-day arithmetic for the date picker. Stored values remain `Date`;
-/// a chosen day is the start of that day in the calendar used to select it.
-enum DaylineDateSelection {
-    static func startOfDay(_ date: Date, calendar: Calendar = .current) -> Date {
-        calendar.startOfDay(for: date)
-    }
-
-    static func monthStart(_ date: Date, calendar: Calendar = .current) -> Date {
-        calendar.date(from: calendar.dateComponents([.year, .month], from: date))
-            ?? startOfDay(date, calendar: calendar)
-    }
-
-    static func byAddingMonths(_ value: Int, to date: Date, calendar: Calendar = .current) -> Date {
-        calendar.date(byAdding: .month, value: value, to: monthStart(date, calendar: calendar))
-            ?? monthStart(date, calendar: calendar)
-    }
-
-    static func byAddingDays(_ value: Int, to date: Date, calendar: Calendar = .current) -> Date {
-        calendar.date(byAdding: .day, value: value, to: startOfDay(date, calendar: calendar))
-            ?? startOfDay(date, calendar: calendar)
-    }
-
-    static func isSameDay(_ lhs: Date, _ rhs: Date, calendar: Calendar = .current) -> Bool {
-        calendar.isDate(lhs, inSameDayAs: rhs)
-    }
-
-    static func isInMonth(_ day: Date, month: Date, calendar: Calendar = .current) -> Bool {
-        calendar.isDate(day, equalTo: month, toGranularity: .month)
-    }
-
-    static func dayKey(_ date: Date, calendar: Calendar = .current) -> String {
-        let parts = calendar.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
-    }
-
-    /// Six weeks, aligned to `calendar.firstWeekday`, including leading and trailing days.
-    static func gridDays(in month: Date, calendar: Calendar = .current) -> [Date] {
-        let start = monthStart(month, calendar: calendar)
-        let weekday = calendar.component(.weekday, from: start)
-        let leading = (weekday - calendar.firstWeekday + 7) % 7
-        let origin = byAddingDays(-leading, to: start, calendar: calendar)
-        return (0..<42).map { byAddingDays($0, to: origin, calendar: calendar) }
-    }
-}
+import DaylineCore
 
 struct DaylineDateField: View {
     @Binding var date: Date

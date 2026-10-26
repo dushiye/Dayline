@@ -1,4 +1,5 @@
 import Foundation
+import DaylineCore
 import SwiftData
 import Observation
 #if canImport(Dayline)

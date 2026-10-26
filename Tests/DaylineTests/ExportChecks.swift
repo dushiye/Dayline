@@ -1,4 +1,5 @@
 import Foundation
+import DaylineCore
 import PDFKit
 import ImageIO
 #if canImport(Dayline)

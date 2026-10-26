@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 import Observation
-import CryptoKit
+import DaylineCore
 
 @MainActor @Observable final class DaylineStore {
     let container: ModelContainer
@@ -435,9 +435,7 @@ import CryptoKit
         let source = task.recurrenceSourceID ?? task.id
         task.recurrenceSourceID = source
         task.recurrenceOccurrenceDate = task.recurrenceOccurrenceDate ?? calendar.startOfDay(for: anchor)
-        let components = calendar.dateComponents([.era, .year, .month, .day], from: date)
-        let key = "\(source.uuidString)|\(calendar.identifier)|\(components.era ?? 1)-\(components.year ?? 0)-\(components.month ?? 0)-\(components.day ?? 0)"
-        let id = Self.stableUUID(key)
+        let id = DaylineIdentity.recurrenceSuccessorID(source: source, occurrence: date, calendar: calendar)
         if let existing = tasks.first(where: { $0.id == id || ($0.recurrenceSourceID == source && $0.recurrenceOccurrenceDate == date) }) {
             task.recurrenceSuccessorID = existing.id
             return
@@ -455,14 +453,6 @@ import CryptoKit
                                 sortOrder: nextSortOrder, repeatRule: task.repeatRule,
                                 recurrenceSourceID: source, recurrenceOccurrenceDate: date)
         context.insert(successor)
-    }
-
-    private static func stableUUID(_ key: String) -> UUID {
-        var bytes = Array(SHA256.hash(data: Data(key.utf8)).prefix(16))
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
-                           bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]))
     }
 }
 
