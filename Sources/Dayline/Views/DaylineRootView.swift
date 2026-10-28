@@ -6,7 +6,7 @@ import DaylineCore
 import DaylineData
 
 private enum DaylineDestination: Hashable {
-    case today, upcoming, inbox, goals, ideas, area(UUID)
+    case today, upcoming, inbox, goals, ideas, review, area(UUID)
 }
 
 struct TaskEditorRequest: Identifiable {
@@ -27,6 +27,7 @@ struct GoalEditorRequest: Identifiable {
 private struct ExportRequest: Identifiable {
     let id = UUID()
     var ideaIDs: Set<UUID>? = nil
+    var reviewDayKey: String? = nil
 }
 
 struct DaylineRootView: View {
@@ -43,6 +44,7 @@ struct DaylineRootView: View {
     @State private var selectedUpcomingDay: Date? = nil
     @State private var pendingBackup: Data?
     @State private var backupName = ""
+    @State private var backupSchemaVersion: Int?
     @State private var showRestoreConfirmation = false
     @State private var showDemoConfirmation = false
     @State private var localError: String?
@@ -51,6 +53,7 @@ struct DaylineRootView: View {
     @State private var deleteTaskID: UUID?
     @State private var deleteGoalID: UUID?
     @State private var exportRequest: ExportRequest?
+    @State private var reviewSession = DailyReviewDraftSession()
     @AppStorage("coachDismissedDay") private var coachDismissedDay = ""
 
     private var selectedArea: Area? {
@@ -65,6 +68,7 @@ struct DaylineRootView: View {
         case .inbox: return "收件箱"
         case .goals: return "目标"
         case .ideas: return "灵感"
+        case .review: return "每日回顾"
         case .area: return selectedArea?.name ?? "领域"
         }
     }
@@ -76,6 +80,7 @@ struct DaylineRootView: View {
         case .inbox: return "先记下来，再决定何时行动。"
         case .goals: return "让今天的行动，靠近真正想要的结果。"
         case .ideas: return "留住想法，慢慢展开。"
+        case .review: return "把今天学到的，变成真正属于自己的东西。"
         case .area: return "持续投入，慢慢积累。"
         }
     }
@@ -86,7 +91,7 @@ struct DaylineRootView: View {
     private var carriedTasks: [DayTask] { openTasks.filter { (DaylineDates.isUnfinishedPast($0) || DaylineDates.isOverdue($0)) && !DaylineDates.isToday($0) } }
     private var todayTasks: [DayTask] { openTasks.filter { DaylineDates.isToday($0) } }
     private var inboxTasks: [DayTask] { openTasks.filter { DaylineDates.isInbox($0) } }
-    private var isEmptyLibrary: Bool { store.tasks.isEmpty && store.goals.isEmpty }
+    private var isEmptyLibrary: Bool { store.tasks.isEmpty && store.goals.isEmpty && store.ideas.isEmpty && store.dailyReviews.isEmpty }
     private var matchingTasks: [DayTask] {
         sortedTasks.filter { matches($0.title) || matches($0.notes) }
     }
@@ -104,6 +109,10 @@ struct DaylineRootView: View {
                     DaylineIdeasView(search: search) { ids in
                         exportRequest = ExportRequest(ideaIDs: ids)
                     }
+                } else if selection == .review {
+                    DaylineDailyReviewView(session: reviewSession) { dayKey in
+                        exportRequest = ExportRequest(reviewDayKey: dayKey)
+                    }
                 } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
@@ -116,6 +125,7 @@ struct DaylineRootView: View {
                             case .inbox: inboxContent
                             case .goals: goalsContent
                             case .ideas: EmptyView()
+                            case .review: EmptyView()
                             case .area: areaContent
                             }
                         }
@@ -148,7 +158,7 @@ struct DaylineRootView: View {
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         Button { exportRequest = ExportRequest() } label: { Label("导出…", systemImage: "square.and.arrow.up") }
-                            .help("导出计划或灵感（⇧⌘E）")
+                            .help("导出计划、灵感或回顾（⇧⌘E）")
                     }
                     ToolbarItem(placement: .primaryAction) {
                         Button { newTask() } label: { Label("新建任务", systemImage: "plus") }
@@ -165,7 +175,7 @@ struct DaylineRootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .daylineNewTask)) { _ in newTask() }
         .onReceive(NotificationCenter.default.publisher(for: .daylineExport)) { _ in exportRequest = ExportRequest() }
         .sheet(item: $exportRequest) { request in
-            DaylineExportCenter(initialIdeaIDs: request.ideaIDs).environment(store)
+            DaylineExportCenter(initialIdeaIDs: request.ideaIDs, initialReviewDayKey: request.reviewDayKey).environment(store)
         }
         .sheet(item: $taskEditor) { request in
             DaylineTaskEditor(request: request).environment(store)
@@ -181,8 +191,8 @@ struct DaylineRootView: View {
         } message: { Text(localError ?? store.errorMessage ?? "请重试。") }
         .confirmationDialog("恢复备份？", isPresented: $showRestoreConfirmation, titleVisibility: .visible) {
             Button("替换当前数据", role: .destructive) { restoreBackup() }
-            Button("取消", role: .cancel) { pendingBackup = nil }
-        } message: { Text("“\(backupName)”将替换全部任务、目标、领域、灵感和计划历史。旧版备份不含灵感与历史。替换前会自动保存当前备份，此操作无法直接撤销。") }
+            Button("取消", role: .cancel) { pendingBackup = nil; backupSchemaVersion = nil }
+        } message: { Text(restoreConfirmationMessage) }
         .confirmationDialog("添加示例内容？", isPresented: $showDemoConfirmation, titleVisibility: .visible) {
             Button("添加示例") { store.loadDemoData() }
             Button("取消", role: .cancel) { }
@@ -217,6 +227,7 @@ struct DaylineRootView: View {
                     navRow("收件箱", symbol: "tray.fill", color: DaylineDesign.accent, count: inboxTasks.count, value: .inbox)
                     navRow("目标", symbol: "scope", color: DaylineDesign.color("purple"), count: nil, value: .goals)
                     navRow("灵感", symbol: "lightbulb", color: DaylineDesign.color("orange"), count: nil, value: .ideas)
+                    navRow("回顾", symbol: "text.book.closed", color: DaylineDesign.color("green"), count: nil, value: .review)
                 }
                 Section("领域  ·  AREAS") {
                     ForEach(store.areas.sorted { $0.sortOrder < $1.sortOrder }, id: \.id) { area in
@@ -230,7 +241,7 @@ struct DaylineRootView: View {
                     Text("每一天，都算数。").font(.system(size: 11)).foregroundStyle(.tertiary)
                     Spacer()
                     Menu {
-                        Button("导出计划或灵感…", systemImage: "doc") { exportRequest = ExportRequest() }
+                        Button("导出计划、灵感或回顾…", systemImage: "doc") { exportRequest = ExportRequest() }
                         Divider()
                         Button("导出备份…", systemImage: "square.and.arrow.up") { exportBackup() }
                         Button("从备份恢复…", systemImage: "square.and.arrow.down") { chooseBackup() }
@@ -267,7 +278,7 @@ struct DaylineRootView: View {
         }.padding(.bottom, 26)
     }
     private var englishLabel: String {
-        switch selection ?? .today { case .today: return "TODAY"; case .upcoming: return "UPCOMING"; case .inbox: return "INBOX"; case .goals: return "GOALS"; case .ideas: return "IDEAS"; case .area: return "AREAS" }
+        switch selection ?? .today { case .today: return "TODAY"; case .upcoming: return "UPCOMING"; case .inbox: return "INBOX"; case .goals: return "GOALS"; case .ideas: return "IDEAS"; case .review: return "DAILY REVIEW"; case .area: return "AREAS" }
     }
 
     private var todayProgressTasks: [DayTask] {
@@ -300,6 +311,33 @@ struct DaylineRootView: View {
         quickCapture(scheduledDate: currentDate)
         completedSection(sortedTasks.filter { $0.isCompleted && (DaylineDates.isToday($0) || ($0.completedAt.map { Calendar.current.isDateInToday($0) } ?? false)) })
         DaylinePlanningSummary(report: PlanningAnalysis.analyze(events: store.planningEvents, asOf: currentDate))
+        todayReviewEntry
+    }
+
+    private var todayReviewEntry: some View {
+        let key = DailyReviewDay.key(for: currentDate, timeZone: .current)
+        let exists = store.dailyReview(for: key) != nil
+        return Button {
+            reviewSession.request(key)
+            selection = .review
+        } label: {
+            HStack(spacing: 13) {
+                Image(systemName: "text.book.closed")
+                    .font(.system(size: 16)).foregroundStyle(DaylineDesign.color("green"))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(exists ? "查看今日回顾" : "写下今天的收获")
+                        .font(.system(size: 13, weight: .medium)).foregroundStyle(.primary)
+                    Text(exists ? "回到今天留下的学习、成长与思考。" : "用几分钟，让今天的输入真正沉淀下来。")
+                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 11)).foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 16).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 12)
+        .accessibilityIdentifier("todayReviewEntry")
     }
 
     @ViewBuilder private var planningAdvice: some View {
@@ -614,7 +652,13 @@ struct DaylineRootView: View {
         panel.allowsMultipleSelection = false
         presentPanel(panel) { response in
             guard response == .OK, let url = panel.url else { return }
-            do { pendingBackup = try Data(contentsOf: url); backupName = url.lastPathComponent; showRestoreConfirmation = true }
+            do {
+                let data = try Data(contentsOf: url)
+                let document = try DaylineBackup.decoder().decode(DaylineBackup.self, from: data)
+                try document.validate()
+                pendingBackup = data; backupName = url.lastPathComponent
+                backupSchemaVersion = document.schemaVersion; showRestoreConfirmation = true
+            }
             catch { localError = error.localizedDescription }
         }
     }
@@ -630,6 +674,13 @@ struct DaylineRootView: View {
         guard let data = pendingBackup else { return }
         do { try store.restoreBackup(data); toast = "已恢复备份"; undoTaskID = nil; selection = .today }
         catch { localError = error.localizedDescription }
-        pendingBackup = nil
+        pendingBackup = nil; backupSchemaVersion = nil
+    }
+
+    private var restoreConfirmationMessage: String {
+        let older = (backupSchemaVersion ?? 3) < 3
+            ? "这是旧版备份，不包含每日回顾；恢复后当前回顾会被清除。"
+            : "备份中的每日回顾也会完整替换当前内容。"
+        return "“\(backupName)”将替换全部任务、目标、领域、灵感、计划历史和每日回顾。\(older) 替换前会自动保存当前备份，此操作无法直接撤销。"
     }
 }

@@ -33,6 +33,18 @@ struct ExportIdeaSnapshot: Sendable {
     var goal: String? = nil
 }
 
+struct ExportReviewSnapshot: Sendable {
+    var id: UUID
+    var dayKey: String
+    var timeZoneID: String
+    var learned: String
+    var growth: String
+    var nextStep: String
+    var freeformNotes: String
+    var createdAt: Date
+    var updatedAt: Date
+}
+
 struct ExportBlock: Sendable {
     enum Style: Sendable { case title, heading, subheading, task, body, metadata }
     var text: String
@@ -60,11 +72,12 @@ struct ExportDocument: Sendable {
 }
 
 enum DaylineExportError: LocalizedError {
-    case invalidRange, emptySelection, tooLarge(String), render(String), write(String)
+    case invalidRange, emptySelection, emptyReviewSelection, tooLarge(String), render(String), write(String)
     var errorDescription: String? {
         switch self {
         case .invalidRange: return "日期范围无效，或超过 366 天；请选择较小的批次。"
         case .emptySelection: return "请选择至少一条灵感。"
+        case .emptyReviewSelection: return "所选日期范围内还没有每日回顾。"
         case .tooLarge(let message), .render(let message), .write(let message): return message
         }
     }
@@ -159,5 +172,42 @@ enum DaylineExporter {
         let header = ExportBlock(text: "Dayline · 灵感", style: .title)
         if combined { return [.init(filename: "Dayline-Ideas", blocks: [header] + documents.flatMap(\.blocks))] }
         return documents.map { .init(filename: $0.filename, blocks: [header] + $0.blocks) }
+    }
+
+    static func documents(reviews: [ExportReviewSnapshot], combined: Bool) throws -> [ExportDocument] {
+        guard !reviews.isEmpty else { throw DaylineExportError.emptyReviewSelection }
+        var seenDays = Set<String>()
+        let documents = reviews.filter { seenDays.insert($0.dayKey).inserted }.sorted { $0.dayKey < $1.dayKey }.map { review in
+            var blocks: [ExportBlock] = [
+                .init(text: review.dayKey + " · " + reviewWeekday(review), style: .heading),
+                .init(text: "记录时区：\(review.timeZoneID) · 更新：\(dayLabel(review.updatedAt))", style: .metadata)
+            ]
+            func append(_ title: String, _ value: String) {
+                guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                blocks.append(.init(text: title, style: .subheading))
+                blocks.append(.init(text: value, style: .body))
+            }
+            append("今天学到了什么？", review.learned)
+            append("今天有哪些成长或进展？", review.growth)
+            append("明天想继续或改进什么？", review.nextStep)
+            append("自由记录", review.freeformNotes)
+            return ExportDocument(filename: "Dayline-Review-\(review.dayKey)", blocks: blocks)
+        }
+        let header = ExportBlock(text: "Dayline · 每日回顾", style: .title)
+        if combined {
+            let first = documents.first!.filename.replacingOccurrences(of: "Dayline-Review-", with: "")
+            let last = documents.last!.filename.replacingOccurrences(of: "Dayline-Review-", with: "")
+            let filename = "Dayline-Reviews-\(first)" + (first == last ? "" : "_to_\(last)")
+            return [.init(filename: filename, blocks: [header] + documents.flatMap(\.blocks))]
+        }
+        return documents.map { .init(filename: $0.filename, blocks: [header] + $0.blocks) }
+    }
+
+    private static func reviewWeekday(_ review: ExportReviewSnapshot) -> String {
+        let zone = TimeZone(identifier: review.timeZoneID) ?? TimeZone(secondsFromGMT: 0)!
+        guard let date = DailyReviewDay.date(for: review.dayKey, timeZone: zone) else { return review.dayKey }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        return weekday(date, calendar: calendar)
     }
 }

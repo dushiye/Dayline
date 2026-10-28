@@ -4,6 +4,67 @@
 
 Git 标签 `v1.1.0-baseline` 引用的是本节已有验收，不是打标签时重新执行的测试。建立仓库时没有再次运行 XCTest，也没有启动正式数据库。原始日志留在本地 `build/`，不纳入 Git。后续提交若声称测试通过，必须写明当次实际运行的命令和结果。
 
+## Daily Review 功能分支（2026-10-28）
+
+分支：`feat/daily-review`，基线 `main` / `origin/main` 为 `62da11b`（tag `v1.2.1`）。本节验证的是未发布功能分支；没有安装、替换或启动正式 Dayline.app，也没有访问 `~/Library/Application Support/Dayline/`。
+
+环境：macOS 27.0（26A428），Xcode 27.1（27A9275），Developer Directory `/Applications/Xcode.app/Contents/Developer`，Apple Swift 6.4，Mac 部署目标 14.0，实验性 iOS 部署目标 17.0。Mac Bundle Identifier 仍为 `app.dayline.mac`，CloudKit 仍关闭。
+
+### 实际执行结果
+
+| 检查 | 结果 |
+| --- | --- |
+| 根 SwiftPM | `swift test`：执行 54 项，53 通过、1 项按设计跳过（仅 Xcode 应用宿主可验证），0 失败 |
+| DaylineCore | `swift test --package-path Packages/DaylineCore`：6/6 通过 |
+| Mac XCTest | Xcode `Dayline` scheme，临时 DerivedData：**54/54 通过，0 失败、0 跳过**；结果包位于 `/tmp/dayline-daily-review-xcode-mac/Logs/Test/` |
+| Mac 构建 | Debug 与 Release 均 **BUILD SUCCEEDED**；Release 为 arm64 + x86_64，产物只在 `/tmp/dayline-daily-review-build-*`，未安装 |
+| iOS 构建 | generic iOS Simulator 的 Debug 与 Release 均 **BUILD SUCCEEDED** |
+| iOS XCTest / UI Test | 隔离 Simulator：单元与布局 **7/7 通过**，既有 UI 自动化 **3/3 通过**，均为 0 失败；包含共享六模型容器与 DailyReview 持久化，并回归五个现有 Tab、任务编辑、目标与 Idea 转任务 |
+| 旧原生规则 | `scripts/test-native.sh`：17/17；脚本已改为链接当前 `DaylineCore` / `DaylineData` 模块 |
+| v1.1 回归 | `scripts/test-v11.sh`：12/12；Ideas、历史、v1 SQLite、v1/v2 JSON、快照与独立进程持久化均通过 |
+| 计划分析 | `scripts/test-planning.sh`：12/12 |
+| 导出 | `scripts/test-export.sh build/daily-review-export-samples-20261028`：全部通过；实际生成回顾合并/分别 PDF 与 Markdown，并读取 PDF 文本、页数和 Markdown UTF-8 长中文末尾；原计划/灵感 PDF、MD、PNG 回归也通过 |
+
+主要构建命令：
+
+```bash
+xcodebuild -project Dayline.xcodeproj -scheme Dayline \
+  -configuration Debug -destination 'platform=macOS,arch=arm64' \
+  -derivedDataPath /tmp/dayline-daily-review-build-debug build
+
+xcodebuild -project Dayline.xcodeproj -scheme Dayline \
+  -configuration Release -destination 'generic/platform=macOS' \
+  -derivedDataPath /tmp/dayline-daily-review-build-release build
+
+xcodebuild -project Dayline.xcodeproj -scheme Dayline \
+  -configuration Debug -destination 'platform=macOS,arch=arm64' \
+  -derivedDataPath /tmp/dayline-daily-review-xcode-mac test
+```
+
+### Daily Review 覆盖
+
+- 创建、同日幂等更新、空白新稿不生成记录、清空已保存内容不绕过删除确认、确认删除、重开持久化。
+- 700 ms UI 防抖所调用的草稿提交行为；成功后清除 dirty，模拟失败时文字和 dirty 状态保留。
+- 上海、洛杉矶、夏令时、闰日、跨年与编辑历史日期；日键不会随查看时区移动。
+- 真实 `Tests/Fixtures/v1.store` 副本和五模型合成 v1.1 数据库的增量迁移；Areas、Goals、Tasks、Ideas、Planning Events 的数量及 ID 保留，源夹具不修改。
+- JSON v1/v2 解码、v3 往返、重复日期/错误身份/损坏数据拒绝、失败恢复不写入、旧备份整库替换清除回顾。
+- 每日不可覆盖备份之后的追加式回顾快照；同秒多次提交也不覆盖。
+- 单日与多日回顾合并/分别导出，长中文 PDF 自动分页且末尾文本可提取，Markdown 保留标题、段落和换行。
+
+### 数据隔离与迁移结论
+
+全部持久化测试使用 `ModelConfiguration` 内存库、`/tmp` 临时库、测试 bundle 内的合成夹具，或 Xcode scheme 的 `DAYLINE_XCTEST_MODE=1`。加入 `DailyReview` 前，文件库会用 SQLite online backup 写独立的 `.before-daily-review.sqlite`；创建失败会停止打开，不会重建空库。测试证明现有五类实体在迁移后保留，并可新增、重开 DailyReview。
+
+备份版本从 v2 升至 v3。v3 必须带 `dailyReviews`；v1/v2 缺少该字段时解码为空。恢复语义仍是完整替换，旧备份会清除当前回顾，确认文案已明确说明。恢复校验在事务前完成，恢复前仍写独立安全备份。
+
+原来的 `Dayline-Auto-yyyy-MM-dd.json` 不覆盖同名文件，因此可能早于晚间回顾。功能分支保留该首份日备份，并在回顾切页、应用进入后台或正常退出时写 `Dayline-Review-时间-随机后缀.json`；自动化测试验证它包含最后文字且不会覆盖已有快照。
+
+### 界面验收状态
+
+已完成源码级可访问性标识、Mac Debug/Release 构建、长文本导出渲染和 iPhone 三种尺寸的既有 layout rendering test。当前会话没有可调用的 Computer Use / 屏幕捕获工具，因此**没有执行 Mac 窗口点击验收，也没有生成新的 Daily Review GUI 截图**。这两项不能标成通过。合并前仍需用 `--qa-store <临时路径>` 手工检查：浅色/深色、最小窗口、长文本、快速切换日期、输入后立即切页、退出重开、删除确认、Today 入口、回顾导出和键盘焦点。严禁用正式数据库完成这份清单。
+
+已知限制：iOS 本轮只共享并验证新模型，没有增加第六个 Tab；没有 CloudKit；「保存选中文字为灵感」未实现；回顾页计划摘要只在已有可靠 Planning Event 日汇总时显示；没有更改正式版本号或创建 Release。
+
 ## 日期选择器（2026-10-26）
 
 目标日期、任务计划日期、任务截止日期和导出起止日期共用 `DaylineDateField`。弹层宽 344 pt。选中日为实心圆，今天为圆环。点选后保存为本机日历的当天零点并关闭弹层；清除会关闭任务或目标的日期开关。导出范围不提供清除。编辑器的「取消」只调用 `dismiss()`，不执行保存。

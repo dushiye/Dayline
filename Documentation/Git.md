@@ -80,10 +80,12 @@ git restore --source v1.1.0-baseline -- Sources/Dayline/某文件.swift
 
 正式库、WAL、SHM、升级快照和 `Automatic Backups/` 都在 Application Support，不在本仓库。应用运行时不要手工替换这些文件。
 
-- 菜单「导出备份…」生成 schemaVersion=2 的 JSON。
+- `feat/daily-review` 分支的菜单「导出备份…」生成 schemaVersion=3 的 JSON；v1/v2 仍可恢复，但按既有整库替换语义会清除当前回顾，界面会在确认前明确提示。
 - 「从备份恢复…」会先写 `Before-Restore-<UUID>.json`，校验失败不替换当前数据。
 - 升级到 v1.1 前的 SQLite 快照是同目录的 `Dayline.store.before-v1.1.sqlite`。
+- Daily Review 增量 schema 另写 `Dayline.store.before-daily-review.sqlite`，已存在时不覆盖。
 - 每日自动备份是 `Dayline-Auto-yyyy-MM-dd.json`，同名文件已存在时不覆盖。
+- 回顾在切页、后台或退出时提交后，另写带时间与随机后缀的 `Dayline-Review-*.json`，用于捕获日备份之后的新文字。
 
 如果数据结构变过，恢复旧代码前要确认那份代码能否打开当前数据库。不能打开时，先保留现有 JSON 备份和 SQLite 快照，再用与该数据库结构匹配的代码版本打开，或按应用自己的迁移路径升级。不要为了配合旧代码而清空正式库。
 

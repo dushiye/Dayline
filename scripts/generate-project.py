@@ -16,20 +16,22 @@ def ids(values):
     return '(' + ', '.join(uid(x) for x in values) + ',)'
 sources = [str(p.relative_to(root)) for p in sorted((root/'Sources'/'Dayline').rglob('*.swift'))]
 tests = [str(p.relative_to(root)) for p in sorted((root/'Tests'/'DaylineTests').rglob('*.swift'))]
+test_fixtures = [str(p.relative_to(root)) for p in sorted((root/'Tests'/'Fixtures').iterdir()) if p.is_file()]
 ios_sources = [str(p.relative_to(root)) for p in sorted((root/'Sources'/'DaylineIOS').rglob('*.swift'))] if (root/'Sources'/'DaylineIOS').exists() else []
 ios_tests = [str(p.relative_to(root)) for p in sorted((root/'Tests'/'DaylineIOSTests').rglob('*.swift'))] if (root/'Tests'/'DaylineIOSTests').exists() else []
 ios_ui = [str(p.relative_to(root)) for p in sorted((root/'Tests'/'DaylineIOSUITests').rglob('*.swift'))] if (root/'Tests'/'DaylineIOSUITests').exists() else []
 resources = ['Resources/Dayline.icns'] if (root/'Resources/Dayline.icns').exists() else []
 ios_plist = ['Resources/iOS/Info.plist'] if (root/'Resources/iOS/Info.plist').exists() else []
-for path in sources + tests + ios_sources + ios_tests + ios_ui + resources + ['Resources/Info.plist', 'README.md'] + ios_plist:
-    filetype = 'sourcecode.swift' if path.endswith('.swift') else 'image.icns' if path.endswith('.icns') else 'text.plist.xml' if path.endswith('.plist') else 'text'
+for path in sources + tests + test_fixtures + ios_sources + ios_tests + ios_ui + resources + ['Resources/Info.plist', 'README.md'] + ios_plist:
+    filetype = 'sourcecode.swift' if path.endswith('.swift') else 'image.icns' if path.endswith('.icns') else 'text.plist.xml' if path.endswith('.plist') else 'text.json' if path.endswith('.json') else 'file'
     obj(path, f'isa = PBXFileReference; lastKnownFileType = {filetype}; path = {q(path)}; sourceTree = SOURCE_ROOT;')
-for path in sources + tests + ios_sources + ios_tests + ios_ui + resources:
+for path in sources + tests + test_fixtures + ios_sources + ios_tests + ios_ui + resources:
     obj('build:'+path, f'isa = PBXBuildFile; fileRef = {uid(path)};')
 obj('appProduct', 'isa = PBXFileReference; explicitFileType = wrapper.application; path = Dayline.app; sourceTree = BUILT_PRODUCTS_DIR;')
 obj('testProduct', 'isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = DaylineTests.xctest; sourceTree = BUILT_PRODUCTS_DIR;')
 obj('sourceGroup', f'isa = PBXGroup; name = Sources; children = {ids(sources)}; sourceTree = "<group>";')
 obj('testGroup', f'isa = PBXGroup; name = Tests; children = {ids(tests)}; sourceTree = "<group>";')
+obj('fixtureGroup', f'isa = PBXGroup; name = Fixtures; children = {ids(test_fixtures)}; sourceTree = "<group>";')
 obj('resourceGroup', f'isa = PBXGroup; name = Resources; children = {ids(resources+["Resources/Info.plist"])}; sourceTree = "<group>";')
 obj('iosProduct', 'isa = PBXFileReference; explicitFileType = wrapper.application; path = DaylineIOS.app; sourceTree = BUILT_PRODUCTS_DIR;')
 obj('iosTestProduct', 'isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = DaylineIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR;')
@@ -38,11 +40,12 @@ obj('iosTestGroup', f'isa = PBXGroup; name = DaylineIOSTests; children = {ids(io
 obj('iosUIProduct', 'isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = DaylineIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR;')
 obj('iosUITestGroup', f'isa = PBXGroup; name = DaylineIOSUITests; children = {ids(ios_ui)}; sourceTree = "<group>";')
 product_children = ["appProduct", "testProduct"] + (["iosProduct", "iosTestProduct"] + (["iosUIProduct"] if ios_ui else []) if ios_sources else [])
-group_children = ["sourceGroup","testGroup","iosSourceGroup","iosTestGroup"] + (["iosUITestGroup"] if ios_ui else []) + ["resourceGroup","README.md","products"] if ios_sources else ["sourceGroup","testGroup","resourceGroup","README.md","products"]
+group_children = ["sourceGroup","testGroup","fixtureGroup","iosSourceGroup","iosTestGroup"] + (["iosUITestGroup"] if ios_ui else []) + ["resourceGroup","README.md","products"] if ios_sources else ["sourceGroup","testGroup","fixtureGroup","resourceGroup","README.md","products"]
 obj('products', f'isa = PBXGroup; name = Products; children = {ids(product_children)}; sourceTree = "<group>";')
 obj('rootGroup', f'isa = PBXGroup; children = {ids(group_children)}; sourceTree = "<group>";')
 for key, paths, phase in [('appSources', sources, 'PBXSourcesBuildPhase'), ('testSources', tests, 'PBXSourcesBuildPhase'), ('appResources', resources, 'PBXResourcesBuildPhase')]:
     obj(key, f'isa = {phase}; buildActionMask = 2147483647; files = {ids(["build:"+p for p in paths]) if paths else "()"}; runOnlyForDeploymentPostprocessing = 0;')
+obj('testResources', f'isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = {ids(["build:"+p for p in test_fixtures]) if test_fixtures else "()"}; runOnlyForDeploymentPostprocessing = 0;')
 obj('iosSources', f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {ids(["build:"+p for p in ios_sources]) if ios_sources else "()"}; runOnlyForDeploymentPostprocessing = 0;')
 obj('iosTestSources', f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {ids(["build:"+p for p in ios_tests]) if ios_tests else "()"}; runOnlyForDeploymentPostprocessing = 0;')
 obj('iosUISources', f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {ids(["build:"+p for p in ios_ui]) if ios_ui else "()"}; runOnlyForDeploymentPostprocessing = 0;')
@@ -91,7 +94,7 @@ for scope in scopes:
 obj('proxy', f'isa = PBXContainerItemProxy; containerPortal = {uid("project")}; proxyType = 1; remoteGlobalIDString = {uid("app")}; remoteInfo = Dayline;')
 obj('dependency', f'isa = PBXTargetDependency; target = {uid("app")}; targetProxy = {uid("proxy")};')
 obj('app', f'isa = PBXNativeTarget; buildConfigurationList = {uid("appConfigs")}; buildPhases = {ids(["appSources","appFrameworks","appResources"])}; buildRules = (); dependencies = (); name = Dayline; packageProductDependencies = {ids(["pkg:DaylineCore","pkg:DaylineData"])}; productName = Dayline; productReference = {uid("appProduct")}; productType = "com.apple.product-type.application";')
-obj('test', f'isa = PBXNativeTarget; buildConfigurationList = {uid("testConfigs")}; buildPhases = {ids(["testSources","testFrameworks"])}; buildRules = (); dependencies = {ids(["dependency"])}; name = DaylineTests; packageProductDependencies = {ids(["pkg:DaylineCoreTests","pkg:DaylineDataTests"])}; productName = DaylineTests; productReference = {uid("testProduct")}; productType = "com.apple.product-type.bundle.unit-test";')
+obj('test', f'isa = PBXNativeTarget; buildConfigurationList = {uid("testConfigs")}; buildPhases = {ids(["testSources","testFrameworks","testResources"])}; buildRules = (); dependencies = {ids(["dependency"])}; name = DaylineTests; packageProductDependencies = {ids(["pkg:DaylineCoreTests","pkg:DaylineDataTests"])}; productName = DaylineTests; productReference = {uid("testProduct")}; productType = "com.apple.product-type.bundle.unit-test";')
 targets = ["app","test"]
 if ios_sources:
     obj('iosProxy', f'isa = PBXContainerItemProxy; containerPortal = {uid("project")}; proxyType = 1; remoteGlobalIDString = {uid("ios")}; remoteInfo = DaylineIOS;')

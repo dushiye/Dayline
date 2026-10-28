@@ -67,6 +67,14 @@ final class DaylineTests: XCTestCase {
     @MainActor func testLegacyFixtureEditRoundTrip() throws { try SharedCoreChecks.legacyFixtureEditRoundTrip() }
     @MainActor func testTwoStoresShareSuccessorButNotPersistentIdentity() throws { try SharedCoreChecks.twoStoresShareSuccessorButNotPersistentIdentity() }
 
+    @MainActor func testDailyReviewCRUDAndOnePerDay() throws { try DailyReviewChecks.crudAndOneReviewPerDay() }
+    @MainActor func testDailyReviewAutosaveSessionAndReopen() throws { try DailyReviewChecks.autosaveSessionRetainsFailureAndPersists() }
+    @MainActor func testDailyReviewCivilDayIdentityAcrossZonesAndDST() throws { try DailyReviewChecks.civilDayIdentityAcrossZonesAndDST() }
+    @MainActor func testDailyReviewAdditiveV11Migration() throws { try DailyReviewChecks.additiveMigrationPreservesLegacyEntities() }
+    @MainActor func testDailyReviewGenuineV1SQLiteMigration() throws { try DailyReviewChecks.genuineV1SQLiteMigrationPreservesSource() }
+    @MainActor func testDailyReviewJSONCompatibilityAndAtomicRejection() throws { try DailyReviewChecks.jsonV1V2V3CompatibilityAndAtomicRejection() }
+    @MainActor func testDailyReviewCheckpointBackups() throws { try DailyReviewChecks.checkpointBackupCapturesLateReviewWithoutOverwrite() }
+
     func testExportRenderingAndFileSafety() throws {
         try ExportChecks.run(directory: try temporaryExportDirectory("rendering"))
     }

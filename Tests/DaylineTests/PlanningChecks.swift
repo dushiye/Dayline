@@ -1,7 +1,7 @@
 import Foundation
 import DaylineCore
 import DaylineData
-#if canImport(Dayline)
+#if canImport(Dayline) && !DAYLINE_SCRIPT_TEST
 @testable import Dayline
 #endif
 

@@ -105,6 +105,18 @@ final class DaylineIOSTests: XCTestCase {
         XCTAssertEqual(DaylineScheduling.stableDayKey(stored, capturedIn: shanghai.timeZone), "2026-10-25")
     }
 
+    func testSharedDailyReviewModelPersistsWithoutChangingExistingEntities() throws {
+        let (store, url) = try makeStore()
+        let task = try XCTUnwrap(store.addTask(title: "iPhone 原有任务"))
+        let review = try XCTUnwrap(store.updateDailyReview(dayKey: "2026-10-28", timeZoneID: "Asia/Shanghai",
+                                                          learned: "共享模型可以读取", growth: "", nextStep: "", freeformNotes: ""))
+        XCTAssertEqual(review.id, DailyReviewDay.stableID(for: "2026-10-28"))
+        let reopened = try reopen(url)
+        XCTAssertEqual(reopened.dailyReviews.first?.learned, "共享模型可以读取")
+        XCTAssertEqual(reopened.tasks.first { $0.id == task.id }?.title, "iPhone 原有任务")
+        XCTAssertEqual(reopened.areas.count, 3)
+    }
+
     private func makeStore() throws -> (DaylineStore, URL) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Dayline-iOSTest-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

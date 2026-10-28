@@ -72,7 +72,7 @@ struct DaylineApp: App {
                 Button("新建任务") { NotificationCenter.default.post(name: .daylineNewTask, object: nil) }
                     .keyboardShortcut("n", modifiers: .command)
                 Divider()
-                Button("导出计划或灵感…") { NotificationCenter.default.post(name: .daylineExport, object: nil) }
+                Button("导出计划、灵感或回顾…") { NotificationCenter.default.post(name: .daylineExport, object: nil) }
                     .keyboardShortcut("e", modifiers: [.command, .shift])
             }
             CommandGroup(after: .appInfo) {
@@ -90,7 +90,7 @@ struct DaylineApp: App {
                     Text("浅色").tag("light")
                     Text("深色").tag("dark")
                 }
-                Text("数据保存在这台 Mac。每日启动或跨日时自动备份，恢复前另存一份备份。可从「文件」导出 PDF、Markdown 或 PNG。")
+                Text("数据保存在这台 Mac。每日启动或跨日时自动备份，回顾结束时另存安全快照，恢复前也会保留备份。可从「文件」导出 PDF、Markdown 或 PNG。")
                     .font(.callout).foregroundStyle(.secondary)
             }
             .formStyle(.grouped)
@@ -103,6 +103,7 @@ struct DaylineApp: App {
 extension Notification.Name {
     static let daylineNewTask = Notification.Name("dayline.newTask")
     static let daylineExport = Notification.Name("dayline.export")
+    static let daylineWillTerminate = Notification.Name("dayline.willTerminate")
 }
 
 final class DaylineAppDelegate: NSObject, NSApplicationDelegate {
@@ -111,6 +112,9 @@ final class DaylineAppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+    func applicationWillTerminate(_ notification: Notification) {
+        NotificationCenter.default.post(name: .daylineWillTerminate, object: nil)
+    }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag { sender.windows.first { $0.canBecomeMain }?.makeKeyAndOrderFront(nil) }
         return true

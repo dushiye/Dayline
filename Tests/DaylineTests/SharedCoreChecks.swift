@@ -1,6 +1,6 @@
 import Foundation
 import SwiftData
-#if canImport(Dayline)
+#if canImport(Dayline) && !DAYLINE_SCRIPT_TEST
 @testable import Dayline
 #endif
 import DaylineCore
@@ -28,10 +28,7 @@ enum SharedCoreChecks {
     }
 
     static func legacyFixtureEditRoundTrip() throws {
-        let source = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("Fixtures/v1.store")
+        let source = DaylineTestFixtures.url("v1.store")
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Dayline-FixtureEdit-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }

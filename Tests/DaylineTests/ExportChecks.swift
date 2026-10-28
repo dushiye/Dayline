@@ -3,7 +3,7 @@ import DaylineCore
 import PDFKit
 import ImageIO
 import DaylineData
-#if canImport(Dayline)
+#if canImport(Dayline) && !DAYLINE_SCRIPT_TEST
 @testable import Dayline
 #endif
 
@@ -105,6 +105,41 @@ enum ExportChecks {
         let extractedTitle = (PDFDocument(url: titlePDF)?.string ?? "").components(separatedBy: .whitespacesAndNewlines).joined()
         try require(extractedTitle.contains(longTitle) && extractedTitle.contains("长标题之后的正文终点"), "Wrapped title or following body clipped in PDF")
         guard let titleSource = CGImageSourceCreateWithURL(titlePNG as CFURL, nil), CGImageSourceCreateImageAtIndex(titleSource, 0, nil) != nil else { throw Failure(description: "Long-title PNG unreadable") }
+
+        let reviewText = (1...45).map { "第\($0)段：用自己的语言沉淀今天学到的内容。\n保留这一段的第二行。" }.joined(separator: "\n\n") + "\n回顾终点"
+        let reviews = [
+            ExportReviewSnapshot(id: DailyReviewDay.stableID(for: "2026-10-25"), dayKey: "2026-10-25",
+                                 timeZoneID: "Asia/Shanghai", learned: reviewText, growth: "完成了一个小实验",
+                                 nextStep: "明天继续验证", freeformNotes: "自由记录", createdAt: first, updatedAt: first),
+            ExportReviewSnapshot(id: DailyReviewDay.stableID(for: "2026-10-26"), dayKey: "2026-10-26",
+                                 timeZoneID: "Asia/Shanghai", learned: "第二天的新认识", growth: "",
+                                 nextStep: "整理例子", freeformNotes: "", createdAt: dates[1], updatedAt: dates[1])
+        ]
+        let reviewCombined = try DaylineExporter.documents(reviews: reviews, combined: true)
+        let reviewSeparate = try DaylineExporter.documents(reviews: reviews, combined: false)
+        try require(reviewCombined.count == 1 && reviewSeparate.count == 2, "Review combined/separate document counts")
+        try require(reviewCombined[0].filename == "Dayline-Reviews-2026-10-25_to_2026-10-26"
+                    && reviewSeparate[0].filename == "Dayline-Review-2026-10-25", "Review filename convention")
+        try require(reviewCombined[0].markdown.contains("## 2026-10-25 · 星期日")
+                    && reviewCombined[0].markdown.contains("### 今天学到了什么？")
+                    && reviewCombined[0].markdown.contains("回顾终点"), "Review Markdown lost headings or long text")
+        for format in [DaylineExportFormat.pdf, .markdown] {
+            let folder = directory.appendingPathComponent("reviews-" + format.rawValue)
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let urls = try DaylineExporter.save(documents: reviewCombined + reviewSeparate, format: format, directory: folder)
+            try require(urls.count == 3, "Review PDF/Markdown combined or separate output missing")
+            if format == .pdf {
+                guard let pdf = PDFDocument(url: urls[0]), let text = pdf.string else { throw Failure(description: "Review PDF unreadable") }
+                try require(pdf.pageCount > 1 && text.contains("回顾终点") && text.contains("第二天的新认识"),
+                            "Review PDF clipped long Chinese text")
+            } else {
+                let text = try String(contentsOf: urls[0], encoding: .utf8)
+                try require(text.contains(reviewText) && text.contains("## 2026-10-26"), "Review Markdown changed text or dates")
+            }
+        }
+        do { _ = try DaylineExporter.documents(reviews: [], combined: true); throw Failure(description: "Empty review range accepted") }
+        catch DaylineExportError.emptyReviewSelection { }
+
         let huge = ExportDocument(filename: "TooLong", blocks: [.init(text: String(repeating: paragraphs, count: 30), style: .body)])
         do { _ = try DaylineExporter.png(huge); throw Failure(description: "Oversized PNG silently clipped") }
         catch DaylineExportError.tooLarge { }
@@ -130,7 +165,7 @@ enum ExportChecks {
         catch DaylineExportError.tooLarge { }
         let remains = try FileManager.default.contentsOfDirectory(atPath: rollback.path)
         try require(remains.isEmpty, "Failed batch left partial output")
-        print("PASS export: A4 PDF text/pages, UTF-8 paragraphs, 7-day combined/separate PDF/MD/PNG, ideas, empty days, unique attribution, PNG limits, collision, rollback")
+        print("PASS export: A4 PDF text/pages, UTF-8 paragraphs, 7-day combined/separate PDF/MD/PNG, ideas, daily reviews, empty days, unique attribution, PNG limits, collision, rollback")
     }
 
     static func cancellation(directory: URL) async throws {
