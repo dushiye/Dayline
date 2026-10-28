@@ -4,6 +4,25 @@
 
 Git 标签 `v1.1.0-baseline` 引用的是本节已有验收，不是打标签时重新执行的测试。建立仓库时没有再次运行 XCTest，也没有启动正式数据库。原始日志留在本地 `build/`，不纳入 Git。后续提交若声称测试通过，必须写明当次实际运行的命令和结果。
 
+## macOS 控件细化（2026-10-28，未发布）
+
+分支 `feat/native-ui-refinement` 基于 `54631ed`，包含 Daily Review。审计发现 Ideas 的系统 Picker 和 Review 的历史菜单在布局和视觉上不一致；保留原生多选列表和分段 Picker，将领域/目标改为紧凑原生 Menu，共用柔和按钮及菜单标签。回顾编辑器由内容决定高度，日期仍使用原日历。没有改动数据模型、备份或业务规则。
+
+环境为 macOS 27.0、Xcode 27.1；所有真实窗口使用 `--qa-store /tmp/dayline-ui-refinement-qa/baseline.store`，示例数据均为合成内容，未使用正式数据库或替换已安装应用。
+
+| 检查 | 当次实际结果 |
+| --- | --- |
+| 基线 Mac XCTest | 54/54 通过 |
+| 最终 Mac Debug 与 XCTest | 54/54 通过，0 失败；`xcodebuild -project Dayline.xcodeproj -scheme Dayline -configuration Debug -destination 'platform=macOS,arch=arm64' -derivedDataPath /tmp/dayline-ui-refinement-after test` |
+| 最终 Mac Release | `xcodebuild` generic macOS Release：BUILD SUCCEEDED，DerivedData `/tmp/dayline-ui-refinement-release` |
+| 原有规则 | `scripts/test-native.sh`：17/17；此检查执行于最后一次分段控件窄栏调整前，最终完整 XCTest 已重新运行 |
+| 真实窗口 | Ideas 与 Review 浅色、深色截图；放大窗口与 860 pt 宽最小窗口实查。最小宽度下分段控件使用系统常规尺寸以避免截断 |
+| 交互 | 使用 macOS 辅助功能在隔离窗口切换 Ideas/Review、创建 Idea、展开领域和历史菜单、选择 Learning 观察筛选、编辑回顾并重新启动确认保存、打开日期弹层和导出中心。导出中心显示回顾及所选日期；本次未在 GUI 中完成写文件 |
+
+截图位于 `Screenshots/native-ui-refinement/`：`ideas-before-light.png`、`ideas-after-light.png`、`review-before-light.png`、`review-after-light.png`、`ideas-after-dark.png`、`review-after-dark.png`、`ideas-after-min-dark.png`、`review-after-min-dark.png`。前后比较在同样的窗口尺寸下执行；系统截图阴影边距会随窗口激活状态变化。窄栏截图记录最终分段控件调整；其他 after 图记录此前同一轮布局，窄栏适配之后未重新拍摄大窗口。
+
+本轮截图审查发现并修复了菜单标签被系统样式吞掉、回顾占位文字居中的问题。当前系统菜单已通过辅助功能树确认展开和选项，但独立菜单窗口截图未成功，故没有提交菜单展开截图。未完整验证长文本极限、键盘逐项导航、VoiceOver、降低透明度及 macOS 14 实机；这些仍需合并前检查。屏幕权限允许后曾意外截到另一个前台窗口，文件已立即删除，未纳入仓库。
+
 ## Daily Review 功能分支（2026-10-28）
 
 分支：`feat/daily-review`，基线 `main` / `origin/main` 为 `62da11b`（tag `v1.2.1`）。本节验证的是未发布功能分支；没有安装、替换或启动正式 Dayline.app，也没有访问 `~/Library/Application Support/Dayline/`。

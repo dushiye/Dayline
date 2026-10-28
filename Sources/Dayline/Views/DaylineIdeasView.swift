@@ -53,14 +53,16 @@ struct DaylineIdeasView: View {
                 }
                 Spacer()
                 Button { exportSelection() } label: { Label("导出", systemImage: "square.and.arrow.up") }
+                    .buttonStyle(DaylineQuietButtonStyle())
                     .disabled(selectedIdeas.isEmpty).help("导出选中的灵感")
                     .accessibilityIdentifier("ideasExportButton")
                 Button(action: addIdea) { Label("新灵感", systemImage: "square.and.pencil") }
+                    .buttonStyle(DaylineQuietButtonStyle())
                     .accessibilityIdentifier("ideasAddButton")
             }.padding(.horizontal, 30).padding(.top, 30).padding(.bottom, 23)
             Divider()
             HSplitView {
-                ideaList.frame(minWidth: 220, idealWidth: 270, maxWidth: 360)
+                ideaList.frame(minWidth: 220, idealWidth: 250, maxWidth: 300)
                 Group {
                     if let idea = selectedIdea {
                         IdeaDetailEditor(idea: idea, onConvert: { convert(idea) },
@@ -74,7 +76,7 @@ struct DaylineIdeasView: View {
                                         detail: "选择一条灵感继续写，或记录一个新想法。",
                                         actionTitle: "新建灵感", action: addIdea)
                     }
-                }.frame(minWidth: 300, maxWidth: .infinity, maxHeight: .infinity)
+                }.frame(minWidth: 230, maxWidth: .infinity, maxHeight: .infinity)
             }.frame(maxHeight: .infinity)
             if let error = store.errorMessage {
                 Divider()
@@ -115,13 +117,30 @@ struct DaylineIdeasView: View {
     private var ideaList: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Picker("灵感筛选", selection: $filter) {
-                    ForEach(IdeaFilter.allCases) { value in Text(value.rawValue).tag(value) }
-                }.pickerStyle(.segmented).labelsHidden()
-                Picker("领域筛选", selection: $areaFilter) {
-                    Text("所有领域").tag(Optional<UUID>.none)
-                    ForEach(store.areas, id: \.id) { area in Text(area.name).tag(Optional(area.id)) }
-                }.font(.system(size: 12))
+                ViewThatFits(in: .horizontal) {
+                    ideaFilterPicker.controlSize(.large).fixedSize()
+                    ideaFilterPicker.controlSize(.regular)
+                }
+                HStack {
+                    Menu {
+                        Button { areaFilter = nil } label: {
+                            if areaFilter == nil { Label("所有领域", systemImage: "checkmark") }
+                            else { Text("所有领域") }
+                        }
+                        Divider()
+                        ForEach(store.areas, id: \.id) { area in
+                            Button { areaFilter = area.id } label: {
+                                Label(area.name, systemImage: areaFilter == area.id ? "checkmark" : area.symbol)
+                            }
+                        }
+                    } label: {
+                        DaylineMenuLabel(title: store.areas.first(where: { $0.id == areaFilter })?.name ?? "所有领域", symbol: "line.3.horizontal.decrease")
+                    }
+                    .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
+                    .accessibilityLabel("领域筛选")
+                    .accessibilityValue(store.areas.first(where: { $0.id == areaFilter })?.name ?? "所有领域")
+                    Spacer(minLength: 0)
+                }
             }.padding(14)
             Divider()
             if visibleIdeas.isEmpty {
@@ -164,6 +183,12 @@ struct DaylineIdeasView: View {
         }
     }
 
+    private var ideaFilterPicker: some View {
+        Picker("灵感筛选", selection: $filter) {
+            ForEach(IdeaFilter.allCases) { value in Text(value.rawValue).tag(value) }
+        }.pickerStyle(.segmented).labelsHidden()
+    }
+
     private func ideaRow(_ idea: Idea) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
@@ -182,7 +207,7 @@ struct DaylineIdeasView: View {
                     Text(area.name).lineLimit(1)
                 }
             }.font(.system(size: 10)).foregroundStyle(.tertiary)
-        }.padding(.vertical, 8)
+        }.padding(.vertical, 9)
     }
 
     private var multipleSelection: some View {
@@ -292,6 +317,7 @@ private struct IdeaDetailEditor: View {
                 }.font(.system(size: 10)).foregroundStyle(.secondary)
                 Spacer()
                 Button(action: onConvert) { Label("转为任务", systemImage: "checklist") }
+                    .buttonStyle(DaylineQuietButtonStyle())
                     .help("创建待安排任务，保留原灵感及领域、目标关联")
                     .accessibilityIdentifier("ideaConvertButton")
             }.padding(.top, 15)
@@ -300,19 +326,40 @@ private struct IdeaDetailEditor: View {
     }
 
     private var areaPicker: some View {
-        Picker("领域", selection: areaBinding) {
-            Text("未分类").tag(Optional<UUID>.none)
-            ForEach(store.areas, id: \.id) { area in Text(area.name).tag(Optional(area.id)) }
-        }.fixedSize(horizontal: false, vertical: true)
+        Menu {
+            Button { areaBinding.wrappedValue = nil } label: {
+                if idea.areaID == nil { Label("未分类", systemImage: "checkmark") }
+                else { Text("未分类") }
+            }
+            ForEach(store.areas, id: \.id) { area in
+                Button { areaBinding.wrappedValue = area.id } label: {
+                    Label(area.name, systemImage: area.id == idea.areaID ? "checkmark" : area.symbol)
+                }
+            }
+        } label: {
+            DaylineMenuLabel(title: store.areas.first(where: { $0.id == idea.areaID })?.name ?? "未分类", symbol: "square.grid.2x2", caption: "领域")
+        }.menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
+            .accessibilityLabel("领域")
+            .accessibilityValue(store.areas.first(where: { $0.id == idea.areaID })?.name ?? "未分类")
     }
 
     private var goalPicker: some View {
-        Picker("目标", selection: goalBinding) {
-            Text("不关联目标").tag(Optional<UUID>.none)
-            ForEach(store.goals.filter { $0.status == .active || $0.id == idea.goalID }, id: \.id) { goal in
-                Text(goal.title).tag(Optional(goal.id))
+        Menu {
+            Button { goalBinding.wrappedValue = nil } label: {
+                if idea.goalID == nil { Label("不关联目标", systemImage: "checkmark") }
+                else { Text("不关联目标") }
             }
-        }.fixedSize(horizontal: false, vertical: true)
+            ForEach(store.goals.filter { $0.status == .active || $0.id == idea.goalID }, id: \.id) { goal in
+                Button { goalBinding.wrappedValue = goal.id } label: {
+                    if goal.id == idea.goalID { Label(goal.title, systemImage: "checkmark") }
+                    else { Text(goal.title) }
+                }
+            }
+        } label: {
+            DaylineMenuLabel(title: store.goals.first(where: { $0.id == idea.goalID })?.title ?? "不关联目标", symbol: "scope", caption: "目标")
+        }.menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
+            .accessibilityLabel("目标")
+            .accessibilityValue(store.goals.first(where: { $0.id == idea.goalID })?.title ?? "不关联目标")
     }
 
     private func persist(title: String, body: String, areaID: UUID?, goalID: UUID?) {
