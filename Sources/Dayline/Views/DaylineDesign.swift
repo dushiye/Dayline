@@ -22,6 +22,57 @@ enum DaylineDesign {
     }
 }
 
+/// A quiet secondary control that keeps native Button focus and activation behavior.
+struct DaylineQuietButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var hovering = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 12, weight: .medium))
+            .padding(.horizontal, 11)
+            .frame(minHeight: 32)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 9))
+            .overlay {
+                RoundedRectangle(cornerRadius: 9)
+                    .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : (hovering && isEnabled ? 0.055 : 0)))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 9).strokeBorder(Color.primary.opacity(0.07))
+            }
+            .opacity(isEnabled ? 1 : 0.45)
+            .contentShape(RoundedRectangle(cornerRadius: 9))
+            .onHover { hovering = $0 }
+    }
+}
+
+/// Menu labels have an intrinsic width, so they don't expand across a toolbar or form.
+struct DaylineMenuLabel: View {
+    let title: String
+    let symbol: String
+    var caption: String? = nil
+    @State private var hovering = false
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Image(systemName: symbol).foregroundStyle(.secondary)
+            if let caption { Text(caption).foregroundStyle(.secondary) }
+            Text(title).lineLimit(1).frame(maxWidth: 150, alignment: .leading)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 9, weight: .semibold)).foregroundStyle(.tertiary)
+        }
+        .font(.system(size: 12, weight: .medium))
+        .padding(.horizontal, 11)
+        .frame(minHeight: 32)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 9))
+        .overlay { RoundedRectangle(cornerRadius: 9).fill(Color.primary.opacity(hovering ? 0.055 : 0)) }
+        .overlay { RoundedRectangle(cornerRadius: 9).strokeBorder(Color.primary.opacity(0.07)) }
+        .contentShape(RoundedRectangle(cornerRadius: 9))
+        .fixedSize(horizontal: true, vertical: false)
+        .onHover { hovering = $0 }
+    }
+}
+
 extension TaskPriority {
     var label: String {
         switch self { case .none: return "无优先级"; case .low: return "低"; case .medium: return "中"; case .high: return "高" }

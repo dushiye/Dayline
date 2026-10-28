@@ -103,7 +103,7 @@ struct DaylineDailyReviewView: View {
                         text: binding(\.learned),
                         identifier: "reviewLearnedEditor"
                     )
-                    Divider().padding(.vertical, 8)
+                    Divider().padding(.vertical, 3)
                     promptEditor(
                         title: "今天有哪些成长或进展？",
                         symbol: "leaf",
@@ -111,7 +111,7 @@ struct DaylineDailyReviewView: View {
                         text: binding(\.growth),
                         identifier: "reviewGrowthEditor"
                     )
-                    Divider().padding(.vertical, 8)
+                    Divider().padding(.vertical, 3)
                     promptEditor(
                         title: "明天想继续或改进什么？",
                         symbol: "arrow.forward",
@@ -119,7 +119,7 @@ struct DaylineDailyReviewView: View {
                         text: binding(\.nextStep),
                         identifier: "reviewNextStepEditor"
                     )
-                    Divider().padding(.vertical, 8)
+                    Divider().padding(.vertical, 3)
                     promptEditor(
                         title: "自由记录",
                         symbol: "square.and.pencil",
@@ -132,7 +132,7 @@ struct DaylineDailyReviewView: View {
                 }
                 .frame(maxWidth: 720, alignment: .leading)
                 .padding(.horizontal, 46)
-                .padding(.top, 28)
+                .padding(.top, 20)
                 .padding(.bottom, 44)
                 .frame(maxWidth: .infinity)
             }
@@ -158,7 +158,7 @@ struct DaylineDailyReviewView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("DAYLINE / DAILY REVIEW")
                         .font(.system(size: 10, weight: .semibold)).tracking(2.2).foregroundStyle(.tertiary)
@@ -176,27 +176,33 @@ struct DaylineDailyReviewView: View {
                         }
                     }
                 } label: {
-                    Label("历史", systemImage: "clock.arrow.circlepath")
+                    DaylineMenuLabel(title: "历史", symbol: "clock.arrow.circlepath")
                 }
+                .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
+                .accessibilityLabel("回顾历史")
                 .help("查看写过回顾的日期")
                 Button { exportReview() } label: {
                     Label("导出", systemImage: "square.and.arrow.up")
                 }
+                .buttonStyle(DaylineQuietButtonStyle())
                 .disabled(savedReview == nil && !session.hasContent)
-                .help("导出每日回顾")
+                .help(savedReview == nil && !session.hasContent ? "先写下回顾，再导出" : "导出每日回顾")
                 if savedReview != nil || session.hasContent {
                     Button(role: .destructive) { showDeleteConfirmation = true } label: {
                         Image(systemName: "trash")
-                    }.help("删除这一天的回顾")
+                    }.buttonStyle(DaylineQuietButtonStyle()).accessibilityLabel("删除这一天的回顾")
+                        .help("删除这一天的回顾")
                 }
             }
             HStack(spacing: 10) {
                 Button { move(by: -1) } label: { Image(systemName: "chevron.left") }
+                    .buttonStyle(DaylineQuietButtonStyle())
                     .help("前一天").accessibilityLabel("前一天")
                 DaylineDateField(date: Binding(get: { selectedDate }, set: { date in
                     select(dayKey: DailyReviewDay.key(for: date, timeZone: .current))
                 }), label: "回顾日期", identifier: "dailyReviewDate", allowsClear: false)
                 Button { move(by: 1) } label: { Image(systemName: "chevron.right") }
+                    .buttonStyle(DaylineQuietButtonStyle())
                     .help("后一天").accessibilityLabel("后一天")
                 if session.selectedDayKey != todayKey {
                     Button("今天") { select(dayKey: todayKey) }.buttonStyle(.borderless)
@@ -232,25 +238,32 @@ struct DaylineDailyReviewView: View {
 
     private func promptEditor(title: String, symbol: String, placeholder: String, text: Binding<String>,
                               identifier: String, compact: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 11) {
+        VStack(alignment: .leading, spacing: 9) {
             Label(title, systemImage: symbol)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.primary)
-            ZStack(alignment: .topLeading) {
-                TextEditor(text: text)
-                    .font(.system(size: 14)).lineSpacing(6)
-                    .scrollContentBackground(.hidden)
-                    .frame(minHeight: compact ? 90 : 128)
-                    .accessibilityLabel(title)
-                    .accessibilityIdentifier(identifier)
-                if text.wrappedValue.isEmpty {
-                    Text(placeholder)
-                        .font(.system(size: 14)).foregroundStyle(.tertiary).lineSpacing(6)
-                        .padding(.top, 1).padding(.leading, 5).allowsHitTesting(false)
+            Text(text.wrappedValue.isEmpty ? " " : text.wrappedValue + "\n")
+                .font(.system(size: 14)).lineSpacing(6)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, minHeight: compact ? 64 : 76, alignment: .topLeading)
+                .padding(.horizontal, 5).padding(.vertical, 4)
+                .hidden().accessibilityHidden(true)
+                .overlay(alignment: .topLeading) {
+                    ZStack(alignment: .topLeading) {
+                        TextEditor(text: text)
+                            .font(.system(size: 14)).lineSpacing(6)
+                            .scrollContentBackground(.hidden)
+                            .accessibilityLabel(title)
+                            .accessibilityIdentifier(identifier)
+                        if text.wrappedValue.isEmpty {
+                            Text(placeholder)
+                                .font(.system(size: 14)).foregroundStyle(.tertiary).lineSpacing(6)
+                                .padding(.top, 5).padding(.leading, 5).allowsHitTesting(false)
+                        }
+                    }
                 }
-            }
         }
-        .padding(.vertical, 18)
+        .padding(.vertical, 12)
     }
 
     private var footer: some View {
