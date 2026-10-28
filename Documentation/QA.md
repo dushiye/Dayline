@@ -65,6 +65,14 @@ xcodebuild -project Dayline.xcodeproj -scheme Dayline \
 
 已知限制：iOS 本轮只共享并验证新模型，没有增加第六个 Tab；没有 CloudKit；「保存选中文字为灵感」未实现；回顾页计划摘要只在已有可靠 Planning Event 日汇总时显示；没有更改正式版本号或创建 Release。
 
+### 本机安装与正式库增量迁移（2026-10-28）
+
+用户明确授权替换 `~/Applications/Dayline.app` 并沿用原有数据。`feat/daily-review` 已通过非快进提交 `92818ca` 合并并推送到 `origin/main`。安装使用 `DAYLINE_REPLACE_INSTALLED=yes scripts/install-macos.sh "$HOME/Applications/Dayline.app"`，脚本从当前 `main` 重新执行 Release 构建、ad-hoc 签名和 strict 验证后才移动旧 App；安装后二进制 SHA-256 与已验证构建一致。
+
+旧应用先正常退出。新版随后从 `~/Applications/Dayline.app` 启动并持续运行，成功打开原 `Dayline.store`；新的 `Dayline.store.before-daily-review.sqlite` 升级前在线快照已存在，系统日志没有 Dayline error/fault。根据 `AGENTS.md`，代理没有读取 SQLite 内容、没有复制或替换数据库，也没有用正式库执行测试，因此没有记录或暴露用户任务正文与精确记录数。原有数据由相同 Bundle Identifier、存储目录和 `ModelConfiguration("Dayline")` 原地增量迁移；迁移失败时应用会显示数据库错误页而不会创建空库顶替。
+
+Applications 中两个旧 App 副本在新应用稳定运行后移入废纸篓，当前 `~/Applications` 只保留一个 `Dayline.app`，避免 Spotlight 再显示旧版本。当前 App 的 Info.plist 版本仍为 1.1.1（build 3）；这次没有创建 Tag、Release 或更改签名身份。
+
 ## 日期选择器（2026-10-26）
 
 目标日期、任务计划日期、任务截止日期和导出起止日期共用 `DaylineDateField`。弹层宽 344 pt。选中日为实心圆，今天为圆环。点选后保存为本机日历的当天零点并关闭弹层；清除会关闭任务或目标的日期开关。导出范围不提供清除。编辑器的「取消」只调用 `dismiss()`，不执行保存。
