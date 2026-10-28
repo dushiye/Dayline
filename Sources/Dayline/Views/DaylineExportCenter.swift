@@ -24,14 +24,21 @@ struct DaylineExportCenter: View {
     @State private var failed = false
     @State private var saved: [URL] = []
 
-    private enum ContentKind: String, CaseIterable { case plans = "每日计划", ideas = "灵感" }
+    private enum ContentKind: String, CaseIterable { case plans = "每日计划", ideas = "灵感", reviews = "每日回顾" }
     private enum PlanRange: String, CaseIterable { case today = "今天", day = "指定日期", seven = "连续七天", custom = "自定义范围" }
     private enum IdeaScope: String, CaseIterable { case selected = "所选", all = "全部", filtered = "筛选结果" }
 
-    init(initialIdeaIDs: Set<UUID>? = nil) {
-        _content = State(initialValue: initialIdeaIDs == nil ? .plans : .ideas)
+    init(initialIdeaIDs: Set<UUID>? = nil, initialReviewDayKey: String? = nil) {
+        let initialContent: ContentKind = initialReviewDayKey == nil ? (initialIdeaIDs == nil ? .plans : .ideas) : .reviews
+        _content = State(initialValue: initialContent)
         _ideaScope = State(initialValue: initialIdeaIDs == nil ? .all : .selected)
         _selected = State(initialValue: initialIdeaIDs ?? [])
+        if let initialReviewDayKey,
+           let date = DailyReviewDay.date(for: initialReviewDayKey, timeZone: .current) {
+            _range = State(initialValue: .day)
+            _start = State(initialValue: date)
+            _end = State(initialValue: date)
+        }
     }
 
     private var filteredIdeas: [Idea] {
@@ -59,14 +66,14 @@ struct DaylineExportCenter: View {
                 ForEach(ContentKind.allCases, id: \.self) { Text($0.rawValue).tag($0) }
             }.pickerStyle(.segmented)
             Group {
-                if content == .plans { planControls } else { ideaControls }
+                if content == .ideas { ideaControls } else { dateRangeControls }
                 HStack {
                     Picker("格式", selection: $format) {
                         ForEach(DaylineExportFormat.allCases) { Text($0.label).tag($0) }
                     }
                     Picker("文件组织", selection: $combined) {
                         Text("合并为一个文件").tag(true)
-                        Text(content == .plans ? "每天一个文件" : "每条灵感一个文件").tag(false)
+                        Text(separateFileLabel).tag(false)
                     }
                 }
             }.disabled(busy || choosingFolder)
@@ -93,7 +100,14 @@ struct DaylineExportCenter: View {
         .interactiveDismissDisabled(busy || choosingFolder)
     }
 
-    private var planControls: some View {
+    private var separateFileLabel: String {
+        switch content {
+        case .plans, .reviews: return "每天一个文件"
+        case .ideas: return "每条灵感一个文件"
+        }
+    }
+
+    private var dateRangeControls: some View {
         VStack(alignment: .leading, spacing: 12) {
             Picker("日期范围", selection: $range) {
                 ForEach(PlanRange.allCases, id: \.self) { Text($0.rawValue).tag($0) }
@@ -104,7 +118,9 @@ struct DaylineExportCenter: View {
                     if range == .custom { labeledDate("结束", date: $end, identifier: "exportEndDate") }
                 }
             }
-            Text(DaylineExporter.attribution + " 包括已完成任务和无计划的日期。")
+            Text(content == .plans
+                 ? DaylineExporter.attribution + " 包括已完成任务和无计划的日期。"
+                 : "仅导出所选范围内已经写过的回顾；空白日期不会生成文件。")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -159,6 +175,15 @@ struct DaylineExportCenter: View {
         let first = range == .today ? Date() : start
         let last = range == .custom ? end : range == .seven ? calendar.date(byAdding: .day, value: 6, to: first)! : first
         let dates = try DaylineExporter.dates(from: first, through: last, calendar: calendar)
+        if content == .reviews {
+            let dayKeys = Set(dates.map { DailyReviewDay.key(for: $0, timeZone: calendar.timeZone) })
+            let values = store.dailyReviews.filter { dayKeys.contains($0.dayKey) }.map {
+                ExportReviewSnapshot(id: $0.id, dayKey: $0.dayKey, timeZoneID: $0.timeZoneID,
+                                     learned: $0.learned, growth: $0.growth, nextStep: $0.nextStep,
+                                     freeformNotes: $0.freeformNotes, createdAt: $0.createdAt, updatedAt: $0.updatedAt)
+            }
+            return try DaylineExporter.documents(reviews: values, combined: combined)
+        }
         let values = store.tasks.map { ExportTaskSnapshot(id: $0.id, title: $0.title, notes: $0.notes, scheduledDate: $0.scheduledDate, dueDate: $0.dueDate, isCompleted: $0.isCompleted, priority: $0.priorityRaw, area: area($0.areaID), goal: goal($0.goalID), sortOrder: $0.sortOrder) }
         return try DaylineExporter.documents(planTasks: values, dates: dates, combined: combined, calendar: calendar)
     }

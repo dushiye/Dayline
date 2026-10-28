@@ -9,21 +9,23 @@ public enum DaylineDataError: LocalizedError {
 }
 
 public struct DaylineBackup: Codable {
-    public var schemaVersion: Int = 2
+    public var schemaVersion: Int = 3
     public var exportedAt: Date = Date()
     public var areas: [AreaRecord]
     public var goals: [GoalRecord]
     public var tasks: [TaskRecord]
     public var ideas: [IdeaRecord] = []
     public var planningEvents: [PlanningEventRecord] = []
+    public var dailyReviews: [DailyReviewRecord] = []
 
-    public init(schemaVersion: Int = 2, exportedAt: Date = Date(), areas: [AreaRecord], goals: [GoalRecord],
-         tasks: [TaskRecord], ideas: [IdeaRecord] = [], planningEvents: [PlanningEventRecord] = []) {
+    public init(schemaVersion: Int = 3, exportedAt: Date = Date(), areas: [AreaRecord], goals: [GoalRecord],
+         tasks: [TaskRecord], ideas: [IdeaRecord] = [], planningEvents: [PlanningEventRecord] = [],
+         dailyReviews: [DailyReviewRecord] = []) {
         self.schemaVersion = schemaVersion; self.exportedAt = exportedAt
         self.areas = areas; self.goals = goals; self.tasks = tasks
-        self.ideas = ideas; self.planningEvents = planningEvents
+        self.ideas = ideas; self.planningEvents = planningEvents; self.dailyReviews = dailyReviews
     }
-    enum CodingKeys: String, CodingKey { case schemaVersion, exportedAt, areas, goals, tasks, ideas, planningEvents }
+    enum CodingKeys: String, CodingKey { case schemaVersion, exportedAt, areas, goals, tasks, ideas, planningEvents, dailyReviews }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion = try c.decode(Int.self, forKey: .schemaVersion)
@@ -34,9 +36,15 @@ public struct DaylineBackup: Codable {
         if schemaVersion == 1 {
             ideas = try c.decodeIfPresent([IdeaRecord].self, forKey: .ideas) ?? []
             planningEvents = try c.decodeIfPresent([PlanningEventRecord].self, forKey: .planningEvents) ?? []
+            dailyReviews = try c.decodeIfPresent([DailyReviewRecord].self, forKey: .dailyReviews) ?? []
+        } else if schemaVersion == 2 {
+            ideas = try c.decode([IdeaRecord].self, forKey: .ideas)
+            planningEvents = try c.decode([PlanningEventRecord].self, forKey: .planningEvents)
+            dailyReviews = try c.decodeIfPresent([DailyReviewRecord].self, forKey: .dailyReviews) ?? []
         } else {
             ideas = try c.decode([IdeaRecord].self, forKey: .ideas)
             planningEvents = try c.decode([PlanningEventRecord].self, forKey: .planningEvents)
+            dailyReviews = try c.decode([DailyReviewRecord].self, forKey: .dailyReviews)
         }
     }
 
@@ -63,12 +71,15 @@ public struct DaylineBackup: Codable {
             return date.timeIntervalSince1970.isFinite
                 && (-62_135_596_800...253_402_300_799).contains(date.timeIntervalSince1970)
         }
-        try require(schemaVersion == 1 || schemaVersion == 2, "不支持的备份版本：\(schemaVersion)。")
+        try require((1...3).contains(schemaVersion), "不支持的备份版本：\(schemaVersion)。")
         try require(schemaVersion != 1 || (ideas.isEmpty && planningEvents.isEmpty), "旧版备份不能包含新版记录。")
+        try require(schemaVersion == 3 || dailyReviews.isEmpty, "旧版备份不能包含每日回顾。")
         try require(validDate(exportedAt), "备份导出时间无效。")
         try require(areas.count <= 100 && goals.count <= 100_000 && tasks.count <= 100_000, "备份中的记录数量过大。")
-        try require(ideas.count <= 100_000 && planningEvents.count <= 1_000_000, "灵感或历史记录数量过大。")
-        let allIDs = areas.map(\.id) + goals.map(\.id) + tasks.map(\.id) + ideas.map(\.id) + planningEvents.map(\.id)
+        try require(ideas.count <= 100_000 && planningEvents.count <= 1_000_000 && dailyReviews.count <= 100_000,
+                    "灵感、历史记录或每日回顾数量过大。")
+        let allIDs = areas.map(\.id) + goals.map(\.id) + tasks.map(\.id) + ideas.map(\.id)
+            + planningEvents.map(\.id) + dailyReviews.map(\.id)
         try require(Set(allIDs).count == allIDs.count, "备份包含重复 ID。")
         let areaIDs = Set(areas.map(\.id))
         let goalMap = Dictionary(uniqueKeysWithValues: goals.map { ($0.id, $0) })
@@ -90,6 +101,20 @@ public struct DaylineBackup: Codable {
                 try require(key.count == 10 && formatter.date(from: key).map { formatter.string(from: $0) == key } == true, "计划历史日期无效。")
             }
             // Historical task/area IDs are intentionally retained after deletion.
+        }
+        var reviewDays = Set<String>()
+        for review in dailyReviews {
+            try require(DailyReviewDay.isValid(review.dayKey), "每日回顾日期无效。")
+            try require(TimeZone(identifier: review.timeZoneID) != nil, "每日回顾时区无效。")
+            try require(validDate(review.createdAt) && validDate(review.updatedAt) && review.updatedAt >= review.createdAt,
+                        "每日回顾时间无效。")
+            try require(review.id == DailyReviewDay.stableID(for: review.dayKey), "每日回顾身份与日期不匹配。")
+            try require(reviewDays.insert(review.dayKey).inserted, "同一天包含多条每日回顾。")
+            try require([review.learned, review.growth, review.nextStep, review.freeformNotes].contains {
+                !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }, "每日回顾不能完全为空。")
+            try require([review.learned, review.growth, review.nextStep, review.freeformNotes].allSatisfy { $0.count <= 1_000_000 },
+                        "每日回顾文本过长。")
         }
         try require(areas.count == DaylineSeeds.areas.count, "必须保留 Learning、Research 和 Health 三个领域。")
         for seed in DaylineSeeds.areas {

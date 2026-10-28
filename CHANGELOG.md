@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add an unreleased Daily Review workspace with three reflection prompts, optional notes, date history, debounced autosave, and a quiet Today entry point.
+- Add a sixth shared SwiftData model with civil-day identity, an independent pre-migration snapshot, JSON backup schema v3, and v1/v2 restore compatibility.
+- Export one or several reviews as Markdown, PDF, or PNG through the existing export center.
+- Keep the experimental iPhone app on five tabs while sharing and testing the expanded local schema.
 - Rebuild the current source before installing, so an update does not reuse an old app binary.
 - Put package products before dependencies so the current Swift tools can build the Mac app.
 - License the project under MIT.

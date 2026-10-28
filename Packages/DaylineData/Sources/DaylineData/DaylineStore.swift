@@ -11,6 +11,7 @@ import DaylineCore
     public var areas: [Area] = []
     public var ideas: [Idea] = []
     public var planningEvents: [PlanningEventRecord] = []
+    public var dailyReviews: [DailyReview] = []
     public var errorMessage: String?
     private var committedTasks: [UUID: TaskRecord] = [:]
     private var historySequence = 0
@@ -40,7 +41,7 @@ import DaylineCore
     /// macOS still opens `~/Library/Application Support/Dayline/Dayline.store`. iOS must pass
     /// its own sandbox URL and must never pass that Mac path.
     public static func makeContainer(inMemory: Bool = false, url: URL? = nil) throws -> ModelContainer {
-        let schema = Schema([Area.self, Goal.self, DayTask.self, Idea.self, PlanningEventEntity.self])
+        let schema = Schema([Area.self, Goal.self, DayTask.self, Idea.self, PlanningEventEntity.self, DailyReview.self])
         let configuration: ModelConfiguration
         if inMemory {
             configuration = ModelConfiguration("Dayline", schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
@@ -56,6 +57,7 @@ import DaylineCore
             }
             try FileManager.default.createDirectory(at: location.deletingLastPathComponent(), withIntermediateDirectories: true)
             try DaylineSafetyBackup.beforeUpgrade(at: location)
+            try DaylineSafetyBackup.beforeDailyReviewUpgrade(at: location)
             configuration = ModelConfiguration("Dayline", schema: schema, url: location, allowsSave: true, cloudKitDatabase: .none)
         }
         return try ModelContainer(for: schema, configurations: [configuration])
@@ -77,9 +79,12 @@ import DaylineCore
         let newIdeas = try context.fetch(FetchDescriptor<Idea>()).sorted { $0.updatedAt > $1.updatedAt }
         let entities = try context.fetch(FetchDescriptor<PlanningEventEntity>()).sorted { $0.sequence < $1.sequence }
         let newEvents = try entities.map { try $0.record() }
+        let newReviews = try context.fetch(FetchDescriptor<DailyReview>()).sorted {
+            $0.dayKey == $1.dayKey ? $0.id.uuidString < $1.id.uuidString : $0.dayKey > $1.dayKey
+        }
         historySequence = entities.last?.sequence ?? 0
         areas = newAreas; goals = newGoals; tasks = newTasks
-        ideas = newIdeas; planningEvents = newEvents
+        ideas = newIdeas; planningEvents = newEvents; dailyReviews = newReviews
     }
 
     public func save() {
@@ -210,10 +215,13 @@ import DaylineCore
                 let goalMap = Dictionary(uniqueKeysWithValues: goals.map { ($0.id, $0) })
                 let taskMap = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
                 let ideaMap = Dictionary(uniqueKeysWithValues: ideas.map { ($0.id, $0) })
+                let reviewMap = Dictionary(uniqueKeysWithValues: dailyReviews.map { ($0.id, $0) })
                 let importedAreaIDs = Set(backup.areas.map(\.id))
                 let importedGoalIDs = Set(backup.goals.map(\.id))
                 let importedTaskIDs = Set(backup.tasks.map(\.id))
                 let importedIdeaIDs = Set(backup.ideas.map(\.id))
+                let importedReviewIDs = Set(backup.dailyReviews.map(\.id))
+                for review in dailyReviews where !importedReviewIDs.contains(review.id) { context.delete(review) }
                 for idea in ideas where !importedIdeaIDs.contains(idea.id) { context.delete(idea) }
                 for event in try context.fetch(FetchDescriptor<PlanningEventEntity>()) { context.delete(event) }
                 for task in tasks where !importedTaskIDs.contains(task.id) { context.delete(task) }
@@ -230,6 +238,9 @@ import DaylineCore
                 }
                 for record in backup.ideas {
                     if let model = ideaMap[record.id] { record.apply(to: model) } else { context.insert(record.model()) }
+                }
+                for record in backup.dailyReviews {
+                    if let model = reviewMap[record.id] { record.apply(to: model) } else { context.insert(record.model()) }
                 }
                 for (index, record) in backup.planningEvents.enumerated() { context.insert(try PlanningEventEntity(record, sequence: index + 1)) }
                 try context.save()
@@ -318,10 +329,71 @@ import DaylineCore
         ideas.first { $0.id == idea.id }
     }
 
+    public func dailyReview(for dayKey: String) -> DailyReview? {
+        dailyReviews.first { $0.dayKey == dayKey }
+    }
+
+    /// Creates or updates exactly one review per captured civil day. A blank new draft never
+    /// creates a row; clearing a saved review requires the explicit confirmed delete action.
+    @discardableResult
+    public func updateDailyReview(dayKey: String, timeZoneID: String, learned: String, growth: String,
+                                  nextStep: String, freeformNotes: String) -> DailyReview? {
+        guard DailyReviewDay.isValid(dayKey) else { errorMessage = "回顾日期无效。"; return nil }
+        guard TimeZone(identifier: timeZoneID) != nil else { errorMessage = "回顾时区无效。"; return nil }
+        let values = [learned, growth, nextStep, freeformNotes]
+        guard values.allSatisfy({ $0.count <= 1_000_000 }) else { errorMessage = "回顾文字过长，暂时无法保存。"; return nil }
+        let hasContent = values.contains { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        let existing = dailyReview(for: dayKey)
+        if !hasContent {
+            guard existing != nil else { errorMessage = nil; return nil }
+            errorMessage = "回顾内容为空，已保存的内容仍保留；如需删除，请使用删除按钮并确认。"
+            return existing
+        }
+        let now = Date()
+        if let existing {
+            existing.learned = learned; existing.growth = growth; existing.nextStep = nextStep
+            existing.freeformNotes = freeformNotes; existing.updatedAt = now
+        } else {
+            context.insert(DailyReview(id: DailyReviewDay.stableID(for: dayKey), dayKey: dayKey,
+                                       timeZoneID: timeZoneID, learned: learned, growth: growth,
+                                       nextStep: nextStep, freeformNotes: freeformNotes,
+                                       createdAt: now, updatedAt: now))
+        }
+        do {
+            try commit()
+            return dailyReview(for: dayKey)
+        } catch {
+            reportAndRollback(error)
+            return dailyReview(for: dayKey)
+        }
+    }
+
+    public func deleteDailyReview(_ review: DailyReview) {
+        guard let live = dailyReviews.first(where: { $0.id == review.id }) else {
+            errorMessage = "这份回顾已不在当前数据库中。"; return
+        }
+        context.delete(live)
+        save()
+    }
+
     public func runDailyBackup() {
         guard automaticBackupDirectory != nil else { return }
         do { try writeAutomaticBackup(name: "Dayline-Auto-\(Self.historyDay(Date())).json") }
         catch { errorMessage = "自动备份失败：\(error.localizedDescription)" }
+    }
+
+    /// Append-only safety snapshot used after a review session is flushed. The first daily
+    /// backup remains immutable; later writing is captured without overwriting that file.
+    public func runReviewCheckpointBackup() {
+        guard automaticBackupDirectory != nil else { return }
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd-HHmmss"
+        let name = "Dayline-Review-\(formatter.string(from: Date()))-\(UUID().uuidString.prefix(8)).json"
+        do { try writeAutomaticBackup(name: name) }
+        catch { errorMessage = "回顾安全备份失败：\(error.localizedDescription)" }
     }
     private func writeAutomaticBackup(name: String) throws {
         guard let directory = automaticBackupDirectory else { return }
@@ -416,7 +488,8 @@ import DaylineCore
                                     goals: try context.fetch(FetchDescriptor<Goal>()).map(GoalRecord.init),
                                     tasks: try context.fetch(FetchDescriptor<DayTask>()).map(TaskRecord.init),
                                     ideas: try context.fetch(FetchDescriptor<Idea>()).map(IdeaRecord.init),
-                                    planningEvents: try context.fetch(FetchDescriptor<PlanningEventEntity>()).sorted { $0.sequence < $1.sequence }.map { try $0.record() })
+                                    planningEvents: try context.fetch(FetchDescriptor<PlanningEventEntity>()).sorted { $0.sequence < $1.sequence }.map { try $0.record() },
+                                    dailyReviews: try context.fetch(FetchDescriptor<DailyReview>()).map(DailyReviewRecord.init))
         return records
     }
 

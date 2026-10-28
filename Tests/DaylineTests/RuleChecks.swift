@@ -3,7 +3,7 @@ import DaylineCore
 import SwiftData
 import Observation
 import DaylineData
-#if canImport(Dayline)
+#if canImport(Dayline) && !DAYLINE_SCRIPT_TEST
 @testable import Dayline
 #endif
 

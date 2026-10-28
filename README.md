@@ -27,6 +27,8 @@ Dayline is a native Mac app. The day you choose, the outcome you want, and the t
 
 The interface is in Chinese.
 
+> **Unreleased work:** the `feat/daily-review` branch adds Daily Review, a quiet place to put one day's learning into your own words, notice real progress, and carry one thought into tomorrow. It autosaves one review per civil day, keeps its date stable across time zones, links from Today, and exports one or several reviews through the existing export center. This branch is under review and is not part of the installed stable release yet.
+
 <p align="center">
   <img src="Documentation/Screenshots/02-today-light-final.png" width="720" alt="Today: plans for the day, grouped by area, with earlier unfinished plans waiting to be rescheduled">
 </p>

@@ -5,18 +5,14 @@ import Observation
 import SQLite3
 import Darwin
 import DaylineData
-#if canImport(Dayline)
+#if canImport(Dayline) && !DAYLINE_SCRIPT_TEST
 @testable import Dayline
 #endif
 
 @MainActor
 enum V11Checks {
     private static func fixture(_ name: String) -> URL {
-        URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("Fixtures", isDirectory: true)
-            .appendingPathComponent(name)
+        DaylineTestFixtures.url(name)
     }
     private static func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         try RuleChecks.require(condition(), message)
@@ -220,7 +216,7 @@ enum V11Checks {
                     "V2 restore changed Idea date or links")
         try require(destination.planningEvents.map(\.id) == eventIDs, "Equal-time event insertion order lost in restore")
         let exported = try backup(destination)
-        try require(exported.schemaVersion == 2 && exported.planningEvents.map(\.id) == eventIDs && exported.planningEvents.map(\.kind) == [.planned, .completed, .reopened, .completed], "V2 export lost historical identity/order")
+        try require(exported.schemaVersion == 3 && exported.planningEvents.map(\.id) == eventIDs && exported.planningEvents.map(\.kind) == [.planned, .completed, .reopened, .completed], "V3 export lost historical identity/order")
         try destination.restoreBackup(destination.exportBackup())
         try require(destination.planningEvents.map(\.id) == eventIDs && destination.tasks[0].isCompleted, "Second round trip duplicated baselines or lost completion")
     }
@@ -288,7 +284,7 @@ enum V11Checks {
         let task = try unwrap(source.addTask(title: "重复", scheduledDate: Date(), repeatRule: .daily), "Repeat setup failed")
         source.toggleTask(task)
         var old = try backup(source)
-        old.schemaVersion = 1; old.ideas = []; old.planningEvents = []
+        old.schemaVersion = 1; old.ideas = []; old.planningEvents = []; old.dailyReviews = []
         let s = try RuleChecks.store()
         try s.restoreBackup(DaylineBackup.encoder().encode(old))
         let taskIDs = Set(s.tasks.map(\.id)), baselineIDs = Set(s.planningEvents.map(\.id))

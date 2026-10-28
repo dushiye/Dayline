@@ -5,9 +5,19 @@ public enum DaylineSafetyBackup {
     /// SQLite's online backup includes committed WAL content, even if another reader is open.
     /// Never delete/recreate the source store if migration or backup fails.
     public static func beforeUpgrade(at source: URL) throws {
+        try snapshotBeforeUpgrade(at: source, suffix: ".before-v1.1.sqlite")
+    }
+
+    /// A separate recovery point for the additive DailyReview schema. Keeping a new name
+    /// avoids treating the old v1.1 snapshot as protection for a later migration.
+    public static func beforeDailyReviewUpgrade(at source: URL) throws {
+        try snapshotBeforeUpgrade(at: source, suffix: ".before-daily-review.sqlite")
+    }
+
+    private static func snapshotBeforeUpgrade(at source: URL, suffix: String) throws {
         guard FileManager.default.fileExists(atPath: source.path) else { return }
         let destination = source.deletingLastPathComponent()
-            .appendingPathComponent(source.lastPathComponent + ".before-v1.1.sqlite")
+            .appendingPathComponent(source.lastPathComponent + suffix)
         guard !FileManager.default.fileExists(atPath: destination.path) else { return }
         let temporary = destination.appendingPathExtension(UUID().uuidString + ".partial")
         var reader: OpaquePointer?
