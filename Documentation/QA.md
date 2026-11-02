@@ -319,3 +319,7 @@ PASS Separate-process disk persistence
 - 任务编辑器的领域、关联目标和重复改用紧凑的原生菜单，沿用共享控件样式。
 - 隔离环境下 macOS Debug 构建、Release 构建成功；Dayline XCTest 54/54、`scripts/test-native.sh` 17/17 通过。现有 XCTest 包含回顾草稿持久化和重新打开检查，但不模拟中文输入法。
 - 启动了带 `--qa-store /tmp/dayline-input-fix-qa/isolated.store` 的隔离实例；因 GUI 自动化无法可靠区分同时运行的正式版与测试版同名窗口，没有在可能属于正式版的窗口执行测试输入。连续中文输入、焦点、长文本滚动和菜单视觉仍需在可明确识别的隔离窗口验收。
+
+#### 同日补充：隔离 GUI 验收
+
+退出所有已打开的 Dayline 后，只启动了 `--qa-store /tmp/dayline-input-fix-qa/isolated.store` 的 Debug 实例，并确认进程参数。实际点击 Today 加号打开编辑器、输入并创建任务；重启后任务保留。快速输入草稿可带入编辑器，取消后原草稿仍在；领域菜单可选择 Research。回顾中粘贴中文多行、自动保存后继续追加英文及中文，焦点与文字保留；切换页面及正常退出重启后内容保留。查看了回顾与任务编辑器的浅色窗口。GUI 自动化输入未模拟中文输入法的候选词/拼音组合过程，因此该特定场景尚未验证；深色外观和长文本边界本次也未验收。
