@@ -15,6 +15,8 @@ struct TaskEditorRequest: Identifiable {
     var areaID: UUID?
     var goalID: UUID?
     var scheduledDate: Date?
+    var initialTitle: String = ""
+    var onCreated: (() -> Void)? = nil
 }
 
 struct GoalEditorRequest: Identifiable {
@@ -580,7 +582,18 @@ struct DaylineRootView: View {
 
     private func quickCapture(scheduledDate: Date?) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: "plus").font(.system(size: 16, weight: .light)).foregroundStyle(.tertiary).frame(width: 22)
+            Button {
+                let capturedTitle = quickTitle
+                taskEditor = TaskEditorRequest(scheduledDate: scheduledDate, initialTitle: capturedTitle) {
+                    if quickTitle == capturedTitle { quickTitle = "" }
+                }
+            } label: {
+                Image(systemName: "plus").font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(DaylineDesign.accent).frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain).help("打开任务编辑器")
+            .accessibilityLabel("打开任务编辑器")
             TextField("添加任务，按回车保存…", text: $quickTitle)
                 .textFieldStyle(.plain).font(.system(size: 13))
                 .accessibilityIdentifier("quickTaskField")
