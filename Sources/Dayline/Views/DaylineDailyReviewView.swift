@@ -242,26 +242,22 @@ struct DaylineDailyReviewView: View {
             Label(title, systemImage: symbol)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.primary)
-            Text(text.wrappedValue.isEmpty ? " " : text.wrappedValue + "\n")
-                .font(.system(size: 14)).lineSpacing(6)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, minHeight: compact ? 64 : 76, alignment: .topLeading)
-                .padding(.horizontal, 5).padding(.vertical, 4)
-                .hidden().accessibilityHidden(true)
-                .overlay(alignment: .topLeading) {
-                    ZStack(alignment: .topLeading) {
-                        TextEditor(text: text)
-                            .font(.system(size: 14)).lineSpacing(6)
-                            .scrollContentBackground(.hidden)
-                            .accessibilityLabel(title)
-                            .accessibilityIdentifier(identifier)
-                        if text.wrappedValue.isEmpty {
-                            Text(placeholder)
-                                .font(.system(size: 14)).foregroundStyle(.tertiary).lineSpacing(6)
-                                .padding(.top, 5).padding(.leading, 5).allowsHitTesting(false)
-                        }
-                    }
+            // Keep the editor's viewport stable while typing. Measuring its height from
+            // the changing text moves the outer scroll view and disrupts marked input.
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: text)
+                    .font(.system(size: 14)).lineSpacing(6)
+                    .scrollContentBackground(.hidden)
+                    .accessibilityLabel(title)
+                    .accessibilityIdentifier(identifier)
+                if text.wrappedValue.isEmpty {
+                    Text(placeholder)
+                        .font(.system(size: 14)).foregroundStyle(.tertiary).lineSpacing(6)
+                        .padding(.top, 5).padding(.leading, 5).allowsHitTesting(false)
                 }
+            }
+            .frame(height: compact ? 90 : 110)
+
         }
         .padding(.vertical, 12)
     }

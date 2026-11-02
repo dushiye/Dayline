@@ -79,17 +79,27 @@ struct DaylineTaskEditor: View {
                         }
                         GridRow {
                             editorLabel("领域", symbol: "square.grid.2x2")
-                            Picker("领域", selection: $areaID) {
-                                Text("未分类").tag(Optional<UUID>.none)
-                                ForEach(store.areas, id: \.id) { area in Text(area.name).tag(Optional(area.id)) }
-                            }.labelsHidden()
+                            Menu {
+                                Button("未分类") { areaID = nil }
+                                ForEach(store.areas, id: \.id) { area in
+                                    Button(area.name) { areaID = area.id }
+                                }
+                            } label: {
+                                DaylineMenuLabel(title: store.areas.first(where: { $0.id == areaID })?.name ?? "未分类", symbol: "square.grid.2x2")
+                            }.menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
+                                .accessibilityLabel("领域")
                         }
                         GridRow {
                             editorLabel("关联目标", symbol: "scope")
-                            Picker("关联目标", selection: $goalID) {
-                                Text("不关联目标").tag(Optional<UUID>.none)
-                                ForEach(selectableGoals, id: \.id) { goal in Text(goal.title).tag(Optional(goal.id)) }
-                            }.labelsHidden()
+                            Menu {
+                                Button("不关联目标") { goalID = nil }
+                                ForEach(selectableGoals, id: \.id) { goal in
+                                    Button(goal.title) { goalID = goal.id }
+                                }
+                            } label: {
+                                DaylineMenuLabel(title: store.goals.first(where: { $0.id == goalID })?.title ?? "不关联目标", symbol: "scope")
+                            }.menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
+                                .accessibilityLabel("关联目标")
                         }
                         GridRow {
                             editorLabel("优先级", symbol: "exclamationmark")
@@ -99,9 +109,14 @@ struct DaylineTaskEditor: View {
                         }
                         GridRow {
                             editorLabel("重复", symbol: "repeat")
-                            Picker("重复", selection: $repeatRule) {
-                                ForEach(RepeatRule.allCases, id: \.self) { value in Text(value.label).tag(value) }
-                            }.labelsHidden()
+                            Menu {
+                                ForEach(RepeatRule.allCases, id: \.self) { value in
+                                    Button(value.label) { repeatRule = value }
+                                }
+                            } label: {
+                                DaylineMenuLabel(title: repeatRule.label, symbol: "repeat")
+                            }.menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
+                                .accessibilityLabel("重复")
                         }
                     }.font(.system(size: 12))
                     if repeatRule != .none {
@@ -132,7 +147,7 @@ struct DaylineTaskEditor: View {
             .onAppear {
                 guard !didLoad else { return }
                 didLoad = true
-                title = request.task?.title ?? ""
+                title = request.task?.title ?? request.initialTitle
                 notes = request.task?.notes ?? ""
                 areaID = request.task?.areaID ?? request.areaID
                 goalID = request.task?.goalID ?? request.goalID
@@ -164,7 +179,7 @@ struct DaylineTaskEditor: View {
         guard let task = request.task else {
             if store.addTask(title: cleanTitle, areaID: areaID, scheduledDate: hasSchedule ? scheduledDate : nil,
                              dueDate: hasDueDate ? dueDate : nil, goalID: goalID,
-                             notes: notes, priority: priority, repeatRule: repeatRule) != nil { dismiss() }
+                             notes: notes, priority: priority, repeatRule: repeatRule) != nil { request.onCreated?(); dismiss() }
             return
         }
         task.title = cleanTitle
