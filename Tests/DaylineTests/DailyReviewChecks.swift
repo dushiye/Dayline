@@ -31,14 +31,21 @@ enum DailyReviewChecks {
 
         _ = store.updateDailyReview(dayKey: day, timeZoneID: "Asia/Shanghai",
                                     learned: "", growth: "", nextStep: "", freeformNotes: "")
-        try require(store.errorMessage != nil && store.dailyReviews.count == 1
-                    && store.dailyReviews[0].learned == "理解得更清楚",
-                    "Clearing every field bypassed confirmed deletion or changed saved content")
+        try require(store.errorMessage == nil && store.dailyReviews.isEmpty,
+                    "Clearing every field should remove the empty review without an error")
+        let blankBackup = try store.exportBackup()
+        let restored = try RuleChecks.store()
+        try restored.restoreBackup(blankBackup)
+        try require(restored.dailyReviews.isEmpty, "Cleared review reappeared after backup restore")
+        let recreated = try unwrap(store.updateDailyReview(dayKey: day, timeZoneID: "Asia/Shanghai",
+                                                            learned: "重新填写", growth: "", nextStep: "", freeformNotes: ""),
+                                   "Could not write after clearing")
+        try require(recreated.id == id, "Recreating a cleared day changed its stable identity")
 
         _ = store.updateDailyReview(dayKey: "2026-02-30", timeZoneID: "Asia/Shanghai",
                                     learned: "坏日期", growth: "", nextStep: "", freeformNotes: "")
         try require(store.errorMessage != nil && store.dailyReviews.count == 1, "Invalid day was accepted or changed data")
-        store.deleteDailyReview(updated)
+        store.deleteDailyReview(recreated)
         try require(store.errorMessage == nil && store.dailyReviews.isEmpty, "Review deletion failed")
     }
 
