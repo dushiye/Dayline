@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import Observation
 import DaylineCore
 import DaylineData
@@ -242,21 +243,8 @@ struct DaylineDailyReviewView: View {
             Label(title, systemImage: symbol)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.primary)
-            // Keep the editor's viewport stable while typing. Measuring its height from
-            // the changing text moves the outer scroll view and disrupts marked input.
-            ZStack(alignment: .topLeading) {
-                TextEditor(text: text)
-                    .font(.system(size: 14)).lineSpacing(6)
-                    .scrollContentBackground(.hidden)
-                    .accessibilityLabel(title)
-                    .accessibilityIdentifier(identifier)
-                if text.wrappedValue.isEmpty {
-                    Text(placeholder)
-                        .font(.system(size: 14)).foregroundStyle(.tertiary).lineSpacing(6)
-                        .padding(.top, 5).padding(.leading, 5).allowsHitTesting(false)
-                }
-            }
-            .frame(height: compact ? 90 : 110)
+            ReviewTextEditor(text: text, placeholder: placeholder, label: title, identifier: identifier)
+                .frame(height: compact ? 90 : 110)
 
         }
         .padding(.vertical, 12)
@@ -353,5 +341,82 @@ struct DaylineDailyReviewView: View {
     private func historyLabel(_ key: String) -> String {
         guard let date = DailyReviewDay.date(for: key, timeZone: .current) else { return key }
         return date.formatted(.dateTime.year().month().day().weekday(.wide))
+    }
+}
+
+
+/// NSTextView owns marked text until the input method commits it. SwiftUI refreshes
+/// must never replace the text storage while a candidate is being composed.
+struct ReviewTextEditor: NSViewRepresentable {
+    @Binding var text: String
+    let placeholder: String
+    let label: String
+    let identifier: String
+
+    func makeCoordinator() -> Coordinator { Coordinator(text: $text) }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scroll = NSScrollView()
+        scroll.drawsBackground = false
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.borderType = .noBorder
+        let editor = ReviewNativeTextView()
+        editor.isRichText = false
+        editor.drawsBackground = false
+        editor.isVerticallyResizable = true
+        editor.isHorizontallyResizable = false
+        editor.textContainer?.widthTracksTextView = true
+        editor.textContainerInset = NSSize(width: 0, height: 4)
+        editor.font = .systemFont(ofSize: 14)
+        editor.textColor = .labelColor
+        editor.placeholder = placeholder
+        editor.setAccessibilityLabel(label)
+        editor.setAccessibilityIdentifier(identifier)
+        editor.delegate = context.coordinator
+        editor.string = text
+        scroll.documentView = editor
+        return scroll
+    }
+
+    func updateNSView(_ scroll: NSScrollView, context: Context) {
+        context.coordinator.text = $text
+        guard let editor = scroll.documentView as? ReviewNativeTextView else { return }
+        context.coordinator.update(editor, from: text)
+    }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        var text: Binding<String>
+        init(text: Binding<String>) { self.text = text }
+
+        func update(_ editor: NSTextView, from value: String) {
+            guard !editor.hasMarkedText(), editor.string != value else { return }
+            editor.string = value
+        }
+        func textDidChange(_ notification: Notification) {
+            guard let editor = notification.object as? NSTextView, !editor.hasMarkedText() else { return }
+            if text.wrappedValue != editor.string { text.wrappedValue = editor.string }
+        }
+        func textDidEndEditing(_ notification: Notification) {
+            guard let editor = notification.object as? NSTextView, !editor.hasMarkedText() else { return }
+            if text.wrappedValue != editor.string { text.wrappedValue = editor.string }
+        }
+    }
+}
+
+final class ReviewNativeTextView: NSTextView {
+    var placeholder = ""
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        guard string.isEmpty && !hasMarkedText() else { return }
+        let point = NSPoint(x: textContainerOrigin.x + (textContainer?.lineFragmentPadding ?? 0), y: textContainerOrigin.y)
+        (placeholder as NSString).draw(at: point, withAttributes: [
+            .font: font ?? NSFont.systemFont(ofSize: 14),
+            .foregroundColor: NSColor.tertiaryLabelColor
+        ])
+    }
+    override func didChangeText() {
+        super.didChangeText()
+        needsDisplay = true
     }
 }
