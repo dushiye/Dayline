@@ -334,7 +334,7 @@ import DaylineCore
     }
 
     /// Creates or updates exactly one review per captured civil day. A blank new draft never
-    /// creates a row; clearing a saved review requires the explicit confirmed delete action.
+    /// creates a row; clearing every field removes the now-empty review.
     @discardableResult
     public func updateDailyReview(dayKey: String, timeZoneID: String, learned: String, growth: String,
                                   nextStep: String, freeformNotes: String) -> DailyReview? {
@@ -345,9 +345,10 @@ import DaylineCore
         let hasContent = values.contains { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         let existing = dailyReview(for: dayKey)
         if !hasContent {
-            guard existing != nil else { errorMessage = nil; return nil }
-            errorMessage = "回顾内容为空，已保存的内容仍保留；如需删除，请使用删除按钮并确认。"
-            return existing
+            guard let existing else { errorMessage = nil; return nil }
+            context.delete(existing)
+            do { try commit() } catch { reportAndRollback(error) }
+            return nil
         }
         let now = Date()
         if let existing {

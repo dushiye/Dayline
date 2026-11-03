@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import Observation
 import DaylineCore
 import DaylineData
@@ -14,6 +15,7 @@ final class DailyReviewDraftSession {
     var freeformNotes = ""
     var isDirty = false
     var lastSavedAt: Date?
+    var editorRevision = UUID()
 
     init(now: Date = Date(), timeZone: TimeZone = .current) {
         selectedDayKey = DailyReviewDay.key(for: now, timeZone: timeZone)
@@ -44,6 +46,7 @@ final class DailyReviewDraftSession {
         freeformNotes = review?.freeformNotes ?? ""
         isDirty = false
         lastSavedAt = review?.updatedAt
+        editorRevision = UUID()
     }
 
     func clear(dayKey: String, timeZone: TimeZone = .current) {
@@ -52,6 +55,7 @@ final class DailyReviewDraftSession {
         timeZoneID = timeZone.identifier
         learned = ""; growth = ""; nextStep = ""; freeformNotes = ""
         isDirty = false; lastSavedAt = nil
+        editorRevision = UUID()
     }
 
     /// The view debounces calls to this method. A failed commit deliberately leaves the
@@ -242,21 +246,8 @@ struct DaylineDailyReviewView: View {
             Label(title, systemImage: symbol)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.primary)
-            // Keep the editor's viewport stable while typing. Measuring its height from
-            // the changing text moves the outer scroll view and disrupts marked input.
-            ZStack(alignment: .topLeading) {
-                TextEditor(text: text)
-                    .font(.system(size: 14)).lineSpacing(6)
-                    .scrollContentBackground(.hidden)
-                    .accessibilityLabel(title)
-                    .accessibilityIdentifier(identifier)
-                if text.wrappedValue.isEmpty {
-                    Text(placeholder)
-                        .font(.system(size: 14)).foregroundStyle(.tertiary).lineSpacing(6)
-                        .padding(.top, 5).padding(.leading, 5).allowsHitTesting(false)
-                }
-            }
-            .frame(height: compact ? 90 : 110)
+            ReviewTextEditor(text: text, revision: session.editorRevision, placeholder: placeholder, label: title, identifier: identifier)
+                .frame(height: compact ? 90 : 110)
 
         }
         .padding(.vertical, 12)
@@ -302,6 +293,12 @@ struct DaylineDailyReviewView: View {
         saveTask = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(700))
             guard !Task.isCancelled else { return }
+            // A previously scheduled save may fire while a new IME candidate is
+            // being composed. Wait until the input method has committed it.
+            if let editor = NSApp.keyWindow?.firstResponder as? ReviewNativeTextView, editor.hasMarkedText() {
+                scheduleSave()
+                return
+            }
             _ = saveNow()
         }
     }
@@ -353,5 +350,88 @@ struct DaylineDailyReviewView: View {
     private func historyLabel(_ key: String) -> String {
         guard let date = DailyReviewDay.date(for: key, timeZone: .current) else { return key }
         return date.formatted(.dateTime.year().month().day().weekday(.wide))
+    }
+}
+
+
+/// NSTextView owns marked text until the input method commits it. SwiftUI refreshes
+/// must never replace the text storage while a candidate is being composed.
+struct ReviewTextEditor: NSViewRepresentable {
+    @Binding var text: String
+    let revision: UUID
+    let placeholder: String
+    let label: String
+    let identifier: String
+
+    func makeCoordinator() -> Coordinator { Coordinator(text: $text, revision: revision) }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scroll = NSScrollView()
+        scroll.drawsBackground = false
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.borderType = .noBorder
+        let editor = ReviewNativeTextView()
+        editor.isRichText = false
+        editor.drawsBackground = false
+        editor.isVerticallyResizable = true
+        editor.isHorizontallyResizable = false
+        editor.textContainer?.widthTracksTextView = true
+        editor.textContainerInset = NSSize(width: 0, height: 4)
+        editor.font = .systemFont(ofSize: 14)
+        editor.textColor = .labelColor
+        editor.placeholder = placeholder
+        editor.setAccessibilityLabel(label)
+        editor.setAccessibilityIdentifier(identifier)
+        editor.delegate = context.coordinator
+        editor.string = text
+        scroll.documentView = editor
+        return scroll
+    }
+
+    func updateNSView(_ scroll: NSScrollView, context: Context) {
+        context.coordinator.text = $text
+        guard let editor = scroll.documentView as? ReviewNativeTextView else { return }
+        context.coordinator.update(editor, from: text, revision: revision)
+    }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        var text: Binding<String>
+        private var revision: UUID
+        init(text: Binding<String>, revision: UUID) { self.text = text; self.revision = revision }
+
+        func update(_ editor: NSTextView, from value: String, revision: UUID) {
+            // The text view owns the active draft. Apply model text only when the
+            // user switches or explicitly clears the document, never on a save refresh.
+            guard revision != self.revision, !editor.hasMarkedText() else { return }
+            self.revision = revision
+            guard editor.string != value else { return }
+            editor.string = value
+        }
+        func textDidChange(_ notification: Notification) {
+            guard let editor = notification.object as? NSTextView, !editor.hasMarkedText() else { return }
+            if text.wrappedValue != editor.string { text.wrappedValue = editor.string }
+        }
+        func textDidEndEditing(_ notification: Notification) {
+            guard let editor = notification.object as? NSTextView, !editor.hasMarkedText() else { return }
+            if text.wrappedValue != editor.string { text.wrappedValue = editor.string }
+        }
+    }
+}
+
+final class ReviewNativeTextView: NSTextView {
+    var placeholder = ""
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        guard string.isEmpty && !hasMarkedText() else { return }
+        let point = NSPoint(x: textContainerOrigin.x + (textContainer?.lineFragmentPadding ?? 0), y: textContainerOrigin.y)
+        (placeholder as NSString).draw(at: point, withAttributes: [
+            .font: font ?? NSFont.systemFont(ofSize: 14),
+            .foregroundColor: NSColor.tertiaryLabelColor
+        ])
+    }
+    override func didChangeText() {
+        super.didChangeText()
+        needsDisplay = true
     }
 }

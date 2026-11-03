@@ -1,4 +1,6 @@
 import XCTest
+import AppKit
+import SwiftUI
 import DaylineCore
 import DaylineData
 @testable import Dayline
@@ -66,6 +68,30 @@ final class DaylineTests: XCTestCase {
     @MainActor func testSameBusinessUUIDIsNotOnePersistentObject() throws { try SharedCoreChecks.sameBusinessUUIDIsNotOnePersistentObject() }
     @MainActor func testLegacyFixtureEditRoundTrip() throws { try SharedCoreChecks.legacyFixtureEditRoundTrip() }
     @MainActor func testTwoStoresShareSuccessorButNotPersistentIdentity() throws { try SharedCoreChecks.twoStoresShareSuccessorButNotPersistentIdentity() }
+
+    @MainActor func testReviewEditorPreservesMarkedComposition() {
+        var saved = ""
+        let binding = Binding<String>(get: { saved }, set: { saved = $0 })
+        let revision = UUID()
+        let coordinator = ReviewTextEditor.Coordinator(text: binding, revision: revision)
+        let editor = ReviewNativeTextView(frame: NSRect(x: 0, y: 0, width: 300, height: 100))
+        editor.delegate = coordinator
+        editor.setMarkedText("jin", selectedRange: NSRange(location: 3, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
+        XCTAssertTrue(editor.hasMarkedText())
+        coordinator.textDidChange(Notification(name: NSText.didChangeNotification, object: editor))
+        XCTAssertEqual(saved, "", "Unconfirmed input must not be autosaved")
+        coordinator.update(editor, from: "", revision: revision)
+        XCTAssertTrue(editor.hasMarkedText(), "A SwiftUI refresh must not cancel composition")
+        XCTAssertEqual(editor.string, "jin")
+        editor.insertText("今天", replacementRange: editor.markedRange())
+        coordinator.textDidChange(Notification(name: NSText.didChangeNotification, object: editor))
+        XCTAssertFalse(editor.hasMarkedText())
+        XCTAssertEqual(saved, "今天")
+        coordinator.update(editor, from: "stale", revision: revision)
+        XCTAssertEqual(editor.string, "今天", "A stale refresh must not replace the active draft")
+        coordinator.update(editor, from: "另一天", revision: UUID())
+        XCTAssertEqual(editor.string, "另一天", "Switching documents must load its content")
+    }
 
     @MainActor func testDailyReviewCRUDAndOnePerDay() throws { try DailyReviewChecks.crudAndOneReviewPerDay() }
     @MainActor func testDailyReviewAutosaveSessionAndReopen() throws { try DailyReviewChecks.autosaveSessionRetainsFailureAndPersists() }
