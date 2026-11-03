@@ -333,3 +333,7 @@ PASS Separate-process disk persistence
 - 用户录屏显示拼音候选组合期间输入被打断。回顾编辑器改用原生 NSTextView，候选文字处于 marked 状态时不向 SwiftUI 回写，也不以 SwiftUI 值覆盖文本；候选确认后同步草稿并延续原有防抖保存。未修改数据模型或数据库。
 - 新增 XCTest 使用 NSTextView 的 `setMarkedText`、模拟 SwiftUI 更新与 `insertText`，检查未确认候选不会被覆盖，确认后的中文能同步；Xcode macOS XCTest **55/55** 通过，Release 构建成功，原生规则 **17/17** 通过。
 - 测试应用通过 `--qa-store /tmp/dayline-ime-qa/isolated.store` 启动。GUI 自动化逐键输入仍未调起系统拼音候选框，实际输入法测试需用户在隔离版完成；不能把合成 marked-text 测试等同于实际输入法验收。
+
+#### 同日：快速输入反馈后的补充修复
+
+用户在隔离版实测反馈快速输入时仍偶发弹回。检查发现先前排定的防抖保存可能在下一次拼音组合期间到期，且界面更新仍会尝试将草稿值回写给原生编辑器。现在候选文字存在时推迟定时保存，同一份回顾由编辑器持有当前文本，仅在切换日期或显式清空时重新加载内容。新增 XCTest 验证旧值刷新不会覆盖编辑器且切换文档能正确更新；55/55 XCTest 和 Release 构建通过。实际拼音高速输入复测仍等待用户反馈。
